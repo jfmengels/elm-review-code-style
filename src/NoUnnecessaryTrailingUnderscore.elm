@@ -131,7 +131,7 @@ If you see some value in it, you may still want to use this rule to detect place
 You can try this rule out by running the following command:
 
 ```bash
-elm-review --template jfmengels/elm-review-common/example --rules NoUnnecessaryTrailingUnderscore
+elm-review --template jfmengels/elm-review-code-style/example --rules NoUnnecessaryTrailingUnderscore
 ```
 
 -}

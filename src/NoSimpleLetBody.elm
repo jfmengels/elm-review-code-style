@@ -61,8 +61,8 @@ The rule will not report when the referenced value was destructured in the let e
 
 This rule resolves a minor style issue, and may not be worth enforcing depending on how strongly you feel about this issue.
 
-I recommend having your full team's buy-in before enabling this rule to reduce the amount of nuisance it will cause
-the tests or even the CI pipeline to fail. This rule does not (currently) provide an automatic fix which may increase
+I recommend having your full team's buy-in before enabling this rule to reduce the amount of frustration it will trigger when
+it causes the tests or even the CI pipeline to fail. This rule does not (currently) provide an automatic fix which may increase
 your team's frustration if they disagree with or don't care about this rule.
 
 
@@ -71,7 +71,7 @@ your team's frustration if they disagree with or don't care about this rule.
 You can try this rule out by running the following command:
 
 ```bash
-elm-review --template jfmengels/elm-review-common/no-simple-let-body --rules NoSimpleLetBody
+elm-review --template jfmengels/elm-review-code-style/example --rules NoSimpleLetBody
 ```
 
 -}
