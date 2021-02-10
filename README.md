@@ -7,6 +7,7 @@ I tend to not have many rules thanks to using `elm-format` and I don't think tha
 
 ## Provided rules
 
+- [`NoSimpleLetBody`](https://package.elm-lang.org/packages/jfmengels/elm-review-code-style/1.0.0/NoSimpleLetBody) - Reports when a let expression's body is a simple reference to a value declared in the let expression.
 - [`NoUnnecessaryTrailingUnderscore`](https://package.elm-lang.org/packages/jfmengels/elm-review-code-style/1.0.0/NoUnnecessaryTrailingUnderscore) - Reports unnecessary or suboptimal trailing underscores in variable names.
 
 
@@ -15,12 +16,14 @@ I tend to not have many rules thanks to using `elm-format` and I don't think tha
 ```elm
 module ReviewConfig exposing (config)
 
+import NoSimpleLetBody
 import NoUnnecessaryTrailingUnderscore
 import Review.Rule exposing (Rule)
 
 config : List Rule
 config =
     [ NoUnnecessaryTrailingUnderscore.rule
+    , NoSimpleLetBody.rule
     ]
 ```
 
