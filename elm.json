@@ -1,7 +1,7 @@
 {
     "type": "package",
     "name": "jfmengels/elm-review-code-style",
-    "summary": "",
+    "summary": "Provide elm-review rules to follow some of my personal code style preferences",
     "license": "BSD-3-Clause",
     "version": "1.0.0",
     "exposed-modules": [

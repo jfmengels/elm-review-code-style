@@ -1,11 +1,13 @@
 # elm-review-code-style
 
-Provides [`elm-review`](https://package.elm-lang.org/packages/jfmengels/elm-review/latest/) rules to REPLACEME.
+Provides [`elm-review`](https://package.elm-lang.org/packages/jfmengels/elm-review/latest/) rules to follow some of my personal code style preferences.
+
+I tend to not have many rules thanks to using `elm-format` and I don't think that `elm-review` serves a better purposes than reporting code style infringements, but I do think that there are use-cases for it. 
 
 
 ## Provided rules
 
-- [`NoUnnecessaryTrailingUnderscore`](https://package.elm-lang.org/packages/jfmengels/elm-review-code-style/1.0.0/NoUnnecessaryTrailingUnderscore) - Reports REPLACEME.
+- [`NoUnnecessaryTrailingUnderscore`](https://package.elm-lang.org/packages/jfmengels/elm-review-code-style/1.0.0/NoUnnecessaryTrailingUnderscore) - Reports unnecessary or suboptimal trailing underscores in variable names.
 
 
 ## Configuration
