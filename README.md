@@ -2,8 +2,16 @@
 
 Provides [`elm-review`](https://package.elm-lang.org/packages/jfmengels/elm-review/latest/) rules to follow some of my personal code style preferences.
 
-I tend to not have many rules thanks to using `elm-format` and I don't think that `elm-review` serves a better purposes than reporting code style infringements, but I do think that there are use-cases for it. 
+I tend to not have many rules related to code style thanks to using `elm-format` and Elm's simple language,
+and I think that `elm-review` brings more values by reporting different kinds of issues than code style infringements,
+but I do think that there are use-cases for it.
 
+A few warnings before trying to add them to your review configuration.
+1. These rules enforce opinions **I personally** have on "better" Elm code, and honestly they're mostly about resolving things I find relatively annoying. Your opinions may diverge, in which case you should probably not enforce them yourself.
+
+2. These rules may be a source of more frustration (when the tests fails because of them) for your team and a source of work that will bring little value to your project. 
+
+With that said, I recommend [trying them out](#try-it-out) to help you decide.
 
 ## Provided rules
 
