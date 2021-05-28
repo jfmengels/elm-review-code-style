@@ -38,6 +38,9 @@ a value_ = 1
                             , details = details
                             , under = "value_"
                             }
+                            |> Review.Test.whenFixed """module A exposing (..)
+a value = 1
+"""
                         ]
         , test "should not report an error when argument does not have a trailing _" <|
             \() ->
@@ -110,7 +113,7 @@ port_ = 1
         , test "should report an error when argument in parens has unnecessary trailing _" <|
             \() ->
                 """module A exposing (..)
-a (value_) = 1
+a (value_) = value_
 """
                     |> Review.Test.run rule
                     |> Review.Test.expectErrors
@@ -119,11 +122,15 @@ a (value_) = 1
                             , details = details
                             , under = "value_"
                             }
+                            |> Review.Test.atExactly { start = { row = 2, column = 4 }, end = { row = 2, column = 10 } }
+                            |> Review.Test.whenFixed """module A exposing (..)
+a (value) = value
+"""
                         ]
         , test "should report an error when arguments in alias has unnecessary trailing _" <|
             \() ->
                 """module A exposing (..)
-a (value1_ as value2_) = 1
+a (value1_ as value2_) = value1_ + value2_
 """
                     |> Review.Test.run rule
                     |> Review.Test.expectErrors
@@ -132,16 +139,24 @@ a (value1_ as value2_) = 1
                             , details = details
                             , under = "value1_"
                             }
+                            |> Review.Test.atExactly { start = { row = 2, column = 4 }, end = { row = 2, column = 11 } }
+                            |> Review.Test.whenFixed """module A exposing (..)
+a (value1 as value2_) = value1 + value2_
+"""
                         , Review.Test.error
                             { message = "value2_ should not end with an underscore"
                             , details = details
                             , under = "value2_"
                             }
+                            |> Review.Test.atExactly { start = { row = 2, column = 15 }, end = { row = 2, column = 22 } }
+                            |> Review.Test.whenFixed """module A exposing (..)
+a (value1_ as value2) = value1_ + value2
+"""
                         ]
         , test "should report an error when arguments in tuple has unnecessary trailing _" <|
             \() ->
                 """module A exposing (..)
-a (value1_, value2_) = 1
+a (value1_, value2_) = (value1_, value2_)
 """
                     |> Review.Test.run rule
                     |> Review.Test.expectErrors
@@ -150,16 +165,24 @@ a (value1_, value2_) = 1
                             , details = details
                             , under = "value1_"
                             }
+                            |> Review.Test.atExactly { start = { row = 2, column = 4 }, end = { row = 2, column = 11 } }
+                            |> Review.Test.whenFixed """module A exposing (..)
+a (value1, value2_) = (value1, value2_)
+"""
                         , Review.Test.error
                             { message = "value2_ should not end with an underscore"
                             , details = details
                             , under = "value2_"
                             }
+                            |> Review.Test.atExactly { start = { row = 2, column = 13 }, end = { row = 2, column = 20 } }
+                            |> Review.Test.whenFixed """module A exposing (..)
+a (value1_, value2) = (value1_, value2)
+"""
                         ]
         , test "should report an error when arguments in uncons pattern has unnecessary trailing _" <|
             \() ->
                 """module A exposing (..)
-a (Foo value_) = 1
+a (Foo value_) = value_
 """
                     |> Review.Test.run rule
                     |> Review.Test.expectErrors
@@ -168,13 +191,17 @@ a (Foo value_) = 1
                             , details = details
                             , under = "value_"
                             }
+                            |> Review.Test.atExactly { start = { row = 2, column = 8 }, end = { row = 2, column = 14 } }
+                            |> Review.Test.whenFixed """module A exposing (..)
+a (Foo value) = value
+"""
                         ]
         , test "should report an error when variables from case expression patterns have unnecessary trailing _" <|
             \() ->
                 """module A exposing (..)
 a =
   case b of
-    value_ -> 1
+    value_ -> value_
 """
                     |> Review.Test.run rule
                     |> Review.Test.expectErrors
@@ -183,13 +210,19 @@ a =
                             , details = details
                             , under = "value_"
                             }
+                            |> Review.Test.atExactly { start = { row = 4, column = 5 }, end = { row = 4, column = 11 } }
+                            |> Review.Test.whenFixed """module A exposing (..)
+a =
+  case b of
+    value -> value
+"""
                         ]
         , test "should report an error for uncons patterns" <|
             \() ->
                 """module A exposing (..)
 a =
   case b of
-    value1_ :: value2_ -> 1
+    value1_ :: value2_ -> ( value1_, value2_ )
 """
                     |> Review.Test.run rule
                     |> Review.Test.expectErrors
@@ -198,18 +231,30 @@ a =
                             , details = details
                             , under = "value1_"
                             }
+                            |> Review.Test.atExactly { start = { row = 4, column = 5 }, end = { row = 4, column = 12 } }
+                            |> Review.Test.whenFixed """module A exposing (..)
+a =
+  case b of
+    value1 :: value2_ -> ( value1, value2_ )
+"""
                         , Review.Test.error
                             { message = "value2_ should not end with an underscore"
                             , details = details
                             , under = "value2_"
                             }
+                            |> Review.Test.atExactly { start = { row = 4, column = 16 }, end = { row = 4, column = 23 } }
+                            |> Review.Test.whenFixed """module A exposing (..)
+a =
+  case b of
+    value1_ :: value2 -> ( value1_, value2 )
+"""
                         ]
         , test "should report an error for list patterns" <|
             \() ->
                 """module A exposing (..)
 a =
   case b of
-    [value1_ , value2_] -> 1
+    [value1_, value2_] -> ( value1_, value2_ )
 """
                     |> Review.Test.run rule
                     |> Review.Test.expectErrors
@@ -218,11 +263,23 @@ a =
                             , details = details
                             , under = "value1_"
                             }
+                            |> Review.Test.atExactly { start = { row = 4, column = 6 }, end = { row = 4, column = 13 } }
+                            |> Review.Test.whenFixed """module A exposing (..)
+a =
+  case b of
+    [value1, value2_] -> ( value1, value2_ )
+"""
                         , Review.Test.error
                             { message = "value2_ should not end with an underscore"
                             , details = details
                             , under = "value2_"
                             }
+                            |> Review.Test.atExactly { start = { row = 4, column = 15 }, end = { row = 4, column = 22 } }
+                            |> Review.Test.whenFixed """module A exposing (..)
+a =
+  case b of
+    [value1_, value2] -> ( value1_, value2 )
+"""
                         ]
         , test "should not report an error if a top-level function is already named without the _" <|
             \() ->
@@ -261,7 +318,7 @@ a =
       value -> 1
       () ->
         case b of
-          value_ -> 1
+          value_ -> value_
 """
                     |> Review.Test.run rule
                     |> Review.Test.expectErrors
@@ -270,6 +327,15 @@ a =
                             , details = details
                             , under = "value_"
                             }
+                            |> Review.Test.atExactly { start = { row = 7, column = 11 }, end = { row = 7, column = 17 } }
+                            |> Review.Test.whenFixed """module A exposing (..)
+a =
+    case b of
+      value -> 1
+      () ->
+        case b of
+          value -> value
+"""
                         ]
         , test "should record names from record in scope" <|
             \() ->
@@ -311,7 +377,7 @@ a {value_} = 1
             \() ->
                 """module A exposing (..)
 a value = 1
-b value_ = 1
+b value_ = value_
 """
                     |> Review.Test.run rule
                     |> Review.Test.expectErrors
@@ -320,11 +386,16 @@ b value_ = 1
                             , details = details
                             , under = "value_"
                             }
+                            |> Review.Test.atExactly { start = { row = 3, column = 3 }, end = { row = 3, column = 9 } }
+                            |> Review.Test.whenFixed """module A exposing (..)
+a value = 1
+b value = value
+"""
                         ]
         , test "should report names from anonymous functions" <|
             \() ->
                 """module A exposing (..)
-a = \\value_ -> 1
+a = \\value_ -> value_
 """
                     |> Review.Test.run rule
                     |> Review.Test.expectErrors
@@ -333,12 +404,16 @@ a = \\value_ -> 1
                             , details = details
                             , under = "value_"
                             }
+                            |> Review.Test.atExactly { start = { row = 2, column = 6 }, end = { row = 2, column = 12 } }
+                            |> Review.Test.whenFixed """module A exposing (..)
+a = \\value -> value
+"""
                         ]
         , test "should report names from let declaration functions" <|
             \() ->
                 """module A exposing (..)
 a = let value_ = 1
-    in 1
+    in value_
 """
                     |> Review.Test.run rule
                     |> Review.Test.expectErrors
@@ -347,12 +422,19 @@ a = let value_ = 1
                             , details = details
                             , under = "value_"
                             }
+                            |> Review.Test.atExactly { start = { row = 2, column = 9 }, end = { row = 2, column = 15 } }
+
+                        -- TODO Provide a fix
+                        --                            |> Review.Test.whenFixed """module A exposing (..)
+                        --a = let value = 1
+                        --    in value
+                        --"""
                         ]
         , test "should report names from let declaration patterns" <|
             \() ->
                 """module A exposing (..)
 a = let (Value value_) = 1
-    in 1
+    in value_
 """
                     |> Review.Test.run rule
                     |> Review.Test.expectErrors
@@ -361,6 +443,11 @@ a = let (Value value_) = 1
                             , details = details
                             , under = "value_"
                             }
+                            |> Review.Test.atExactly { start = { row = 2, column = 16 }, end = { row = 2, column = 22 } }
+                            |> Review.Test.whenFixed """module A exposing (..)
+a = let (Value value) = 1
+    in value
+"""
                         ]
         , test "should not report names from let declaration patterns when the pattern is a record pattern" <|
             \() ->
@@ -373,7 +460,7 @@ a = let {value_} = 1
         , test "should report arguments from let functions" <|
             \() ->
                 """module A exposing (..)
-a = let fn value_ = 1
+a = let fn value_ = value_
     in 1
 """
                     |> Review.Test.run rule
@@ -383,6 +470,11 @@ a = let fn value_ = 1
                             , details = details
                             , under = "value_"
                             }
+                            |> Review.Test.atExactly { start = { row = 2, column = 12 }, end = { row = 2, column = 18 } }
+                            |> Review.Test.whenFixed """module A exposing (..)
+a = let fn value = value
+    in 1
+"""
                         ]
         , test "should not report function names from let expressions that would clash with others" <|
             \() ->
