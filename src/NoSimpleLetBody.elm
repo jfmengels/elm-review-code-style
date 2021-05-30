@@ -15,6 +15,8 @@ import Review.Rule as Rule exposing (Rule)
 
 {-| Reports when a let expression's body is a simple reference to a value declared in the let expression.
 
+🔧 Running with `--fix` will automatically remove most of the reported errors.
+
     config =
         [ NoSimpleLetBody.rule
         ]
