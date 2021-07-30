@@ -21,10 +21,12 @@ import Review.Rule as Rule exposing (Rule)
         [ NoSimpleLetBody.rule
         ]
 
-The reasoning behind this rule is that it is not necessary to assign a name (and type annotation) to the result of a let expression,
+The reasoning is that it is not necessary to assign a name (and type annotation) to the result of a let expression,
 since they are redundant with the value or function containing the expression.
 
 If it feels necessary to give a name anyway because it helps clarify the context, then it might be a sign that the computation of that value should be extracted to a function.
+
+Let expressions will be reported regardless of whether they're at the root of a function or deeply nested.
 
 
 ## Fail
