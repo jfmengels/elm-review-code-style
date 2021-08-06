@@ -7,7 +7,7 @@ and I think that `elm-review` brings more values by reporting different kinds of
 but I do think that there are use-cases for it.
 
 A few warnings before trying to add them to your review configuration.
-1. These rules enforce opinions **I personally** have on "nicer" Elm code, and honestly they're mostly about resolving things I find relatively annoying. Do not enforce the ones your or your team disagrees with in your project.
+1. These rules enforce opinions **I personally** have on "nicer" Elm code, and honestly they're mostly about resolving things I find relatively annoying. Do not enforce the ones you or your team disagrees with in your project.
 
 2. These rules may be a source of more frustration (when the tests fails because of them) for your team and a source of work that will bring little value to your project. I try to provide fixes when I can to reduce that work though!
 
