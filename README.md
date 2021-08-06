@@ -16,6 +16,7 @@ With that said, I recommend [trying them out](#try-it-out) to help you decide.
 ## Provided rules
 
 - [🔧 `NoSimpleLetBody`](https://package.elm-lang.org/packages/jfmengels/elm-review-code-style/1.0.0/NoSimpleLetBody "Provides automatic fixes") - Reports when a let expression's body is a simple reference to a value declared in the let expression.
+- [`NoUnnecessaryTrailingUnderscore`](https://package.elm-lang.org/packages/jfmengels/elm-review-code-style/1.0.0/NoUnnecessaryTrailingUnderscore) - Reports unnecessary or suboptimal trailing underscores in variable names.
 
 
 ## Configuration
@@ -24,11 +25,13 @@ With that said, I recommend [trying them out](#try-it-out) to help you decide.
 module ReviewConfig exposing (config)
 
 import NoSimpleLetBody
+import NoUnnecessaryTrailingUnderscore
 import Review.Rule exposing (Rule)
 
 config : List Rule
 config =
-    [ NoSimpleLetBody.rule
+    [ NoUnnecessaryTrailingUnderscore.rule
+    , NoSimpleLetBody.rule
     ]
 ```
 
