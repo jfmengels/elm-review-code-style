@@ -21,7 +21,7 @@ import Review.Rule as Rule exposing (Rule)
         [ NoSimpleLetBody.rule
         ]
 
-The reasoning is that it is not necessary to assign a name (and type annotation) to the result of a let expression,
+The reasoning is that it is not necessary to assign a name to the result of a let expression,
 since they are redundant with the value or function containing the expression.
 
 If it feels necessary to give a name anyway because it helps clarify the context, then it might be a sign that the computation of that value should be extracted to a function.
@@ -66,10 +66,6 @@ The rule will not report when the referenced value was destructured in the let e
 ## When (not) to enable this rule
 
 This rule resolves a minor style issue, and may not be worth enforcing depending on how strongly you feel about this issue.
-
-I recommend having your full team's buy-in before enabling this rule to reduce the amount of frustration it will trigger when
-it causes the tests or even the CI pipeline to fail. This rule does not (currently) provide an automatic fix which may increase
-your team's frustration if they disagree with or don't care about this rule.
 
 
 ## Try it out
