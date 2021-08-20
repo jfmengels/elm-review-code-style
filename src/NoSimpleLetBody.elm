@@ -100,7 +100,7 @@ visitLetExpression nodeRange { declarations, expression } =
         Expression.FunctionOrValue [] name ->
             let
                 declarationData =
-                    getDeclarationData name declarations
+                    getDeclarationsData name declarations
             in
             if declarationData.foundDeclaredWithName then
                 [ Rule.errorWithFix
@@ -147,7 +147,7 @@ visitLetExpression nodeRange { declarations, expression } =
             []
 
 
-getDeclarationData name declarations =
+getDeclarationsData name declarations =
     List.foldl
         (\declaration { lastEnd, foundDeclaredWithName } ->
             case Node.value declaration of
