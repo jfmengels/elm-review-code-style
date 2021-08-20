@@ -99,50 +99,8 @@ visitLetExpression nodeRange { declarations, expression } =
     case Node.value expression of
         Expression.FunctionOrValue [] name ->
             let
-                declarationData :
-                    { previousEnd : Maybe Location
-                    , lastEnd : Maybe Location
-                    , last : Maybe { name : String, declarationRange : Range, expressionRange : Range }
-                    , foundDeclaredWithName : Bool
-                    }
                 declarationData =
-                    List.foldl
-                        (\declaration { lastEnd, foundDeclaredWithName } ->
-                            case Node.value declaration of
-                                Expression.LetFunction function ->
-                                    let
-                                        functionDeclaration : Expression.FunctionImplementation
-                                        functionDeclaration =
-                                            Node.value function.declaration
-                                    in
-                                    { previousEnd = lastEnd
-                                    , lastEnd = Just (Node.range functionDeclaration.expression).end
-                                    , last =
-                                        if List.isEmpty functionDeclaration.arguments then
-                                            Just
-                                                { name = Node.value functionDeclaration.name
-                                                , declarationRange = Node.range declaration
-                                                , expressionRange = Node.range functionDeclaration.expression
-                                                }
-
-                                        else
-                                            Nothing
-                                    , foundDeclaredWithName = foundDeclaredWithName || Node.value functionDeclaration.name == name
-                                    }
-
-                                Expression.LetDestructuring _ _ ->
-                                    { previousEnd = lastEnd
-                                    , lastEnd = Just (Node.range declaration).end
-                                    , last = Nothing
-                                    , foundDeclaredWithName = foundDeclaredWithName
-                                    }
-                        )
-                        { previousEnd = Nothing
-                        , lastEnd = Nothing
-                        , last = Nothing
-                        , foundDeclaredWithName = False
-                        }
-                        declarations
+                    getDeclarationData name declarations
             in
             if declarationData.foundDeclaredWithName then
                 [ Rule.errorWithFix
@@ -187,3 +145,43 @@ visitLetExpression nodeRange { declarations, expression } =
 
         _ ->
             []
+
+
+getDeclarationData name declarations =
+    List.foldl
+        (\declaration { lastEnd, foundDeclaredWithName } ->
+            case Node.value declaration of
+                Expression.LetFunction function ->
+                    let
+                        functionDeclaration : Expression.FunctionImplementation
+                        functionDeclaration =
+                            Node.value function.declaration
+                    in
+                    { previousEnd = lastEnd
+                    , lastEnd = Just (Node.range functionDeclaration.expression).end
+                    , last =
+                        if List.isEmpty functionDeclaration.arguments then
+                            Just
+                                { name = Node.value functionDeclaration.name
+                                , declarationRange = Node.range declaration
+                                , expressionRange = Node.range functionDeclaration.expression
+                                }
+
+                        else
+                            Nothing
+                    , foundDeclaredWithName = foundDeclaredWithName || Node.value functionDeclaration.name == name
+                    }
+
+                Expression.LetDestructuring _ _ ->
+                    { previousEnd = lastEnd
+                    , lastEnd = Just (Node.range declaration).end
+                    , last = Nothing
+                    , foundDeclaredWithName = foundDeclaredWithName
+                    }
+        )
+        { previousEnd = Nothing
+        , lastEnd = Nothing
+        , last = Nothing
+        , foundDeclaredWithName = False
+        }
+        declarations
