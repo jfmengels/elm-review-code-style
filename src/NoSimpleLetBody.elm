@@ -99,6 +99,12 @@ visitLetExpression nodeRange { declarations, expression } =
     case Node.value expression of
         Expression.FunctionOrValue [] name ->
             let
+                declarationData :
+                    { previousEnd : Maybe Location
+                    , lastEnd : Maybe Location
+                    , last : Maybe { name : String, declarationRange : Range, expressionRange : Range }
+                    , foundDeclaredWithName : Bool
+                    }
                 declarationData =
                     getDeclarationsData name declarations
             in
@@ -147,6 +153,15 @@ visitLetExpression nodeRange { declarations, expression } =
             []
 
 
+getDeclarationsData :
+    String
+    -> List (Node Expression.LetDeclaration)
+    ->
+        { previousEnd : Maybe Location
+        , lastEnd : Maybe Location
+        , last : Maybe { name : String, declarationRange : Range, expressionRange : Range }
+        , foundDeclaredWithName : Bool
+        }
 getDeclarationsData name declarations =
     List.foldl
         (\declaration { lastEnd, foundDeclaredWithName } ->
