@@ -102,7 +102,7 @@ visitLetExpression nodeRange { declarations, expression } =
                 declarationData :
                     { previousEnd : Maybe Location
                     , lastEnd : Maybe Location
-                    , last : Maybe { name : String, declarationRange : Range, expressionRange : Range }
+                    , last : Maybe { name : String, expressionRange : Range }
                     , foundDeclaredWithName : Bool
                     }
                 declarationData =
@@ -133,7 +133,7 @@ getDeclarationsData :
     ->
         { previousEnd : Maybe Location
         , lastEnd : Maybe Location
-        , last : Maybe { name : String, declarationRange : Range, expressionRange : Range }
+        , last : Maybe { name : String, expressionRange : Range }
         , foundDeclaredWithName : Bool
         }
 getDeclarationsData name declarations =
@@ -152,7 +152,6 @@ getDeclarationsData name declarations =
                         if List.isEmpty functionDeclaration.arguments then
                             Just
                                 { name = Node.value functionDeclaration.name
-                                , declarationRange = Node.range declaration
                                 , expressionRange = Node.range functionDeclaration.expression
                                 }
 
@@ -182,7 +181,7 @@ fix :
     ->
         { r
             | previousEnd : Maybe Location
-            , last : Maybe { l | name : String, expressionRange : Range }
+            , last : Maybe { name : String, expressionRange : Range }
         }
     -> List Fix
 fix nodeRange name declarationData =
