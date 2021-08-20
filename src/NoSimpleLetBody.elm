@@ -9,7 +9,7 @@ module NoSimpleLetBody exposing (rule)
 import Elm.Syntax.Expression as Expression exposing (Expression)
 import Elm.Syntax.Node as Node exposing (Node)
 import Elm.Syntax.Range exposing (Location, Range)
-import Review.Fix as Fix
+import Review.Fix as Fix exposing (Fix)
 import Review.Rule as Rule exposing (Rule)
 
 
@@ -117,33 +117,7 @@ visitLetExpression nodeRange { declarations, expression } =
                         ]
                     }
                     (Node.range expression)
-                    (case declarationData.last of
-                        Just last ->
-                            if last.name == name then
-                                case declarationData.previousEnd of
-                                    Nothing ->
-                                        -- It's the only element in the destructuring, we should remove move of the let expression
-                                        [ Fix.removeRange { start = nodeRange.start, end = last.expressionRange.start }
-                                        , Fix.removeRange { start = last.expressionRange.end, end = nodeRange.end }
-                                        ]
-
-                                    Just previousEnd ->
-                                        -- There are other elements in the let body that we need to keep
-                                        let
-                                            indentation : String
-                                            indentation =
-                                                String.repeat (nodeRange.start.column - 1) " "
-                                        in
-                                        [ Fix.replaceRangeBy { start = previousEnd, end = last.expressionRange.start } ("\n" ++ indentation ++ "in\n" ++ indentation)
-                                        , Fix.removeRange { start = last.expressionRange.end, end = nodeRange.end }
-                                        ]
-
-                            else
-                                []
-
-                        Nothing ->
-                            []
-                    )
+                    (fix nodeRange name declarationData)
                 ]
 
             else
@@ -200,3 +174,41 @@ getDeclarationsData name declarations =
         , foundDeclaredWithName = False
         }
         declarations
+
+
+fix :
+    Range
+    -> String
+    ->
+        { r
+            | previousEnd : Maybe Location
+            , last : Maybe { l | name : String, expressionRange : Range }
+        }
+    -> List Fix
+fix nodeRange name declarationData =
+    case declarationData.last of
+        Just last ->
+            if last.name == name then
+                case declarationData.previousEnd of
+                    Nothing ->
+                        -- It's the only element in the destructuring, we should remove move of the let expression
+                        [ Fix.removeRange { start = nodeRange.start, end = last.expressionRange.start }
+                        , Fix.removeRange { start = last.expressionRange.end, end = nodeRange.end }
+                        ]
+
+                    Just previousEnd ->
+                        -- There are other elements in the let body that we need to keep
+                        let
+                            indentation : String
+                            indentation =
+                                String.repeat (nodeRange.start.column - 1) " "
+                        in
+                        [ Fix.replaceRangeBy { start = previousEnd, end = last.expressionRange.start } ("\n" ++ indentation ++ "in\n" ++ indentation)
+                        , Fix.removeRange { start = last.expressionRange.end, end = nodeRange.end }
+                        ]
+
+            else
+                []
+
+        Nothing ->
+            []
