@@ -158,11 +158,6 @@ findDeclarationToMove patternToFind declarations =
         }
 
 
-type Submatch
-    = NoMatch
-    | Match { hasArguments : Bool, expressionRange : Range }
-
-
 findDeclarationToMoveHelp : PatternToFind -> Int -> List (Node Expression.LetDeclaration) -> { index : Int, previousEnd : Maybe Location, lastEnd : Maybe Location } -> Maybe Resolution
 findDeclarationToMoveHelp patternToFind nbOfDeclarations declarations { index, previousEnd, lastEnd } =
     case declarations of
@@ -171,7 +166,7 @@ findDeclarationToMoveHelp patternToFind nbOfDeclarations declarations { index, p
 
         declaration :: rest ->
             let
-                match : Submatch
+                match : Maybe { hasArguments : Bool, expressionRange : Range }
                 match =
                     case Node.value declaration of
                         Expression.LetFunction function ->
@@ -181,19 +176,19 @@ findDeclarationToMoveHelp patternToFind nbOfDeclarations declarations { index, p
                                     Node.value function.declaration
                             in
                             if Reference (Node.value functionDeclaration.name) == patternToFind then
-                                Match
+                                Just
                                     { hasArguments = not (List.isEmpty functionDeclaration.arguments)
                                     , expressionRange = Node.range functionDeclaration.expression
                                     }
 
                             else
-                                NoMatch
+                                Nothing
 
                         Expression.LetDestructuring _ _ ->
-                            NoMatch
+                            Nothing
             in
             case match of
-                Match matchParams ->
+                Just matchParams ->
                     Just
                         (createResolution
                             declaration
@@ -202,7 +197,7 @@ findDeclarationToMoveHelp patternToFind nbOfDeclarations declarations { index, p
                             (index == nbOfDeclarations - 1)
                         )
 
-                NoMatch ->
+                Nothing ->
                     findDeclarationToMoveHelp
                         patternToFind
                         nbOfDeclarations
