@@ -214,35 +214,33 @@ createResolution declaration { hasArguments, expressionRange } { lastEnd, previo
         ReportNoFix
 
     else
-        case lastEnd of
-            Just lastEnd_ ->
-                if isLast then
-                    MoveLast
-                        { previousEnd = lastEnd_
-                        , toCopy = expressionRange
-                        }
+        case ( lastEnd, isLast ) of
+            ( Just lastEnd_, True ) ->
+                MoveLast
+                    { previousEnd = lastEnd_
+                    , toCopy = expressionRange
+                    }
 
-                else
-                    Move
-                        { toRemove =
-                            { start = Maybe.withDefault (Node.range declaration).start previousEnd
-                            , end = (Node.range declaration).end
-                            }
-                        , toCopy = expressionRange
+            ( Just _, False ) ->
+                Move
+                    { toRemove =
+                        { start = Maybe.withDefault (Node.range declaration).start previousEnd
+                        , end = (Node.range declaration).end
                         }
+                    , toCopy = expressionRange
+                    }
 
-            Nothing ->
-                if isLast then
-                    RemoveOnly { toCopy = expressionRange }
+            ( Nothing, True ) ->
+                RemoveOnly { toCopy = expressionRange }
 
-                else
-                    Move
-                        { toRemove =
-                            { start = Maybe.withDefault (Node.range declaration).start previousEnd
-                            , end = (Node.range declaration).end
-                            }
-                        , toCopy = expressionRange
+            ( Nothing, False ) ->
+                Move
+                    { toRemove =
+                        { start = Maybe.withDefault (Node.range declaration).start previousEnd
+                        , end = (Node.range declaration).end
                         }
+                    , toCopy = expressionRange
+                    }
 
 
 fix :
