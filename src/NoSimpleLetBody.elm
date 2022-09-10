@@ -184,8 +184,15 @@ findDeclarationToMoveHelp patternToFind nbOfDeclarations declarations { index, p
                             else
                                 Nothing
 
-                        Expression.LetDestructuring _ _ ->
-                            Nothing
+                        Expression.LetDestructuring destructuringPattern expression ->
+                            if matchPatternToFind patternToFind destructuringPattern then
+                                Just
+                                    { hasArguments = False
+                                    , expressionRange = Node.range expression
+                                    }
+
+                            else
+                                Nothing
             in
             case match of
                 Just matchParams ->
@@ -206,6 +213,12 @@ findDeclarationToMoveHelp patternToFind nbOfDeclarations declarations { index, p
                         , previousEnd = lastEnd
                         , lastEnd = Just (Node.range declaration).end
                         }
+
+
+matchPatternToFind patternToFind destructuringPattern =
+    case patternToFind of
+        Reference _ ->
+            False
 
 
 createResolution : Node a -> { hasArguments : Bool, expressionRange : Range } -> { lastEnd : Maybe Location, previousEnd : Maybe Location } -> Bool -> Resolution
