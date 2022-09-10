@@ -113,7 +113,7 @@ visitLetExpression extractSourceCode nodeRange { declarations, expression } =
             let
                 maybeResolution : Maybe Resolution
                 maybeResolution =
-                    findDeclarationToMove name declarations
+                    findDeclarationToMove (Reference name) declarations
             in
             case maybeResolution of
                 Just resolution ->
@@ -135,6 +135,10 @@ visitLetExpression extractSourceCode nodeRange { declarations, expression } =
             []
 
 
+type PatternToFind
+    = Reference String
+
+
 type Resolution
     = ReportNoFix
     | Move { toRemove : Range, toCopy : Range }
@@ -142,10 +146,10 @@ type Resolution
     | MoveLast { previousEnd : Location, toCopy : Range }
 
 
-findDeclarationToMove : String -> List (Node Expression.LetDeclaration) -> Maybe Resolution
-findDeclarationToMove name declarations =
+findDeclarationToMove : PatternToFind -> List (Node Expression.LetDeclaration) -> Maybe Resolution
+findDeclarationToMove patternToFind declarations =
     findDeclarationToMoveHelp
-        name
+        patternToFind
         (List.length declarations)
         declarations
         { index = 0
@@ -154,8 +158,8 @@ findDeclarationToMove name declarations =
         }
 
 
-findDeclarationToMoveHelp : String -> Int -> List (Node Expression.LetDeclaration) -> { index : Int, previousEnd : Maybe Location, lastEnd : Maybe Location } -> Maybe Resolution
-findDeclarationToMoveHelp name nbOfDeclarations declarations { index, previousEnd, lastEnd } =
+findDeclarationToMoveHelp : PatternToFind -> Int -> List (Node Expression.LetDeclaration) -> { index : Int, previousEnd : Maybe Location, lastEnd : Maybe Location } -> Maybe Resolution
+findDeclarationToMoveHelp patternToFind nbOfDeclarations declarations { index, previousEnd, lastEnd } =
     case declarations of
         [] ->
             Nothing
@@ -172,7 +176,7 @@ findDeclarationToMoveHelp name nbOfDeclarations declarations { index, previousEn
                         functionName =
                             Node.value functionDeclaration.name
                     in
-                    if functionName == name then
+                    if Reference functionName == patternToFind then
                         let
                             isLast : Bool
                             isLast =
@@ -187,7 +191,7 @@ findDeclarationToMoveHelp name nbOfDeclarations declarations { index, previousEn
 
                     else
                         findDeclarationToMoveHelp
-                            name
+                            patternToFind
                             nbOfDeclarations
                             rest
                             { index = index + 1
@@ -197,7 +201,7 @@ findDeclarationToMoveHelp name nbOfDeclarations declarations { index, previousEn
 
                 Expression.LetDestructuring _ _ ->
                     findDeclarationToMoveHelp
-                        name
+                        patternToFind
                         nbOfDeclarations
                         rest
                         { index = index + 1
