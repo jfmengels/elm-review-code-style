@@ -171,12 +171,8 @@ findDeclarationToMoveHelp patternToFind nbOfDeclarations declarations { index, p
                         functionDeclaration : Expression.FunctionImplementation
                         functionDeclaration =
                             Node.value function.declaration
-
-                        functionName : String
-                        functionName =
-                            Node.value functionDeclaration.name
                     in
-                    if Reference functionName == patternToFind then
+                    if Reference (Node.value functionDeclaration.name) == patternToFind then
                         let
                             isLast : Bool
                             isLast =
