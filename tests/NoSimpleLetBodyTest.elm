@@ -164,6 +164,27 @@ a2 = let {b} = 1
 """
                     |> Review.Test.run rule
                     |> Review.Test.expectNoErrors
+        , test "should report an error if the return value was fully destructured in the let" <|
+            \() ->
+                """module A exposing (..)
+a = let (b, c) = xyz
+    in ( b, c )
+"""
+                    |> Review.Test.run rule
+                    |> Review.Test.expectErrors
+                        [ Review.Test.error
+                            { message = "The referenced value should be inlined."
+                            , details =
+                                [ "The name of the value is redundant with the surrounding expression."
+                                , "If you believe that the expression needs a name because it is too complex, consider splitting the expression up more or extracting it to a new function."
+                                ]
+                            , under = "b"
+                            }
+                            |> Review.Test.atExactly { start = { row = 5, column = 8 }, end = { row = 5, column = 9 } }
+                            |> Review.Test.whenFixed """module A exposing (..)
+a = xyz
+"""
+                        ]
         , test "should not report an error if the return value is a reference to another module's value with the same name as something declared" <|
             \() ->
                 """module A exposing (..)
