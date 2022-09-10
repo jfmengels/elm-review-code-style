@@ -139,6 +139,9 @@ visitLetExpression extractSourceCode nodeRange { declarations, expression } =
 checkPatternToFind : Node Expression -> Maybe PatternToFind
 checkPatternToFind expression =
     case Node.value expression of
+        Expression.ParenthesizedExpression expr ->
+            checkPatternToFind expr
+
         Expression.FunctionOrValue [] name ->
             Just (Reference name)
 
