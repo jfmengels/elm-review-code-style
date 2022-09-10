@@ -158,6 +158,11 @@ findDeclarationToMove patternToFind declarations =
         }
 
 
+type Submatch
+    = NoMatch
+    | Match { hasArguments : Bool, expressionRange : Range }
+
+
 findDeclarationToMoveHelp : PatternToFind -> Int -> List (Node Expression.LetDeclaration) -> { index : Int, previousEnd : Maybe Location, lastEnd : Maybe Location } -> Maybe Resolution
 findDeclarationToMoveHelp patternToFind nbOfDeclarations declarations { index, previousEnd, lastEnd } =
     case declarations of
@@ -165,37 +170,39 @@ findDeclarationToMoveHelp patternToFind nbOfDeclarations declarations { index, p
             Nothing
 
         declaration :: rest ->
-            case Node.value declaration of
-                Expression.LetFunction function ->
-                    let
-                        functionDeclaration : Expression.FunctionImplementation
-                        functionDeclaration =
-                            Node.value function.declaration
-                    in
-                    if Reference (Node.value functionDeclaration.name) == patternToFind then
-                        let
-                            isLast : Bool
-                            isLast =
-                                index == nbOfDeclarations - 1
-                        in
-                        Just
-                            (createResolution
-                                { declaration = declaration, functionDeclaration = functionDeclaration, expressionRange = Node.range functionDeclaration.expression }
-                                { lastEnd = lastEnd, previousEnd = previousEnd }
-                                isLast
-                            )
+            let
+                match : Submatch
+                match =
+                    case Node.value declaration of
+                        Expression.LetFunction function ->
+                            let
+                                functionDeclaration : Expression.FunctionImplementation
+                                functionDeclaration =
+                                    Node.value function.declaration
+                            in
+                            if Reference (Node.value functionDeclaration.name) == patternToFind then
+                                Match
+                                    { hasArguments = not (List.isEmpty functionDeclaration.arguments)
+                                    , expressionRange = Node.range functionDeclaration.expression
+                                    }
 
-                    else
-                        findDeclarationToMoveHelp
-                            patternToFind
-                            nbOfDeclarations
-                            rest
-                            { index = index + 1
-                            , previousEnd = lastEnd
-                            , lastEnd = Just (Node.range declaration).end
-                            }
+                            else
+                                NoMatch
 
-                Expression.LetDestructuring _ _ ->
+                        Expression.LetDestructuring _ _ ->
+                            NoMatch
+            in
+            case match of
+                Match matchParams ->
+                    Just
+                        (createResolution
+                            declaration
+                            matchParams
+                            { lastEnd = lastEnd, previousEnd = previousEnd }
+                            (index == nbOfDeclarations - 1)
+                        )
+
+                NoMatch ->
                     findDeclarationToMoveHelp
                         patternToFind
                         nbOfDeclarations
@@ -206,9 +213,9 @@ findDeclarationToMoveHelp patternToFind nbOfDeclarations declarations { index, p
                         }
 
 
-createResolution : { declaration : Node b, functionDeclaration : Expression.FunctionImplementation, expressionRange : Range } -> { lastEnd : Maybe Location, previousEnd : Maybe Location } -> Bool -> Resolution
-createResolution { declaration, functionDeclaration, expressionRange } { lastEnd, previousEnd } isLast =
-    if not (List.isEmpty functionDeclaration.arguments) then
+createResolution : Node a -> { hasArguments : Bool, expressionRange : Range } -> { lastEnd : Maybe Location, previousEnd : Maybe Location } -> Bool -> Resolution
+createResolution declaration { hasArguments, expressionRange } { lastEnd, previousEnd } isLast =
+    if hasArguments then
         ReportNoFix
 
     else
