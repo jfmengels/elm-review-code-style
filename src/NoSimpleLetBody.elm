@@ -245,6 +245,9 @@ findDeclarationToMoveHelp patternToFind nbOfDeclarations declarations { index, p
 matchPatternToFind : PatternToFind -> Node Pattern -> Bool
 matchPatternToFind patternToFind destructuringPattern =
     case ( patternToFind, Node.value destructuringPattern ) of
+        ( _, Pattern.ParenthesizedPattern pattern ) ->
+            matchPatternToFind patternToFind pattern
+
         ( Reference refName, Pattern.VarPattern name ) ->
             refName == name
 
