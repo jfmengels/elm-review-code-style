@@ -79,135 +79,208 @@ elm-review --template jfmengels/elm-review-code-style/example --rules NoSimpleLe
 -}
 rule : Rule
 rule =
-    Rule.newModuleRuleSchema "NoSimpleLetBody" ()
-        |> Rule.withSimpleExpressionVisitor expressionVisitor
+    Rule.newModuleRuleSchemaUsingContextCreator "NoSimpleLetBody" initContext
+        |> Rule.withExpressionEnterVisitor expressionVisitor
         |> Rule.fromModuleRuleSchema
 
 
-expressionVisitor : Node Expression -> List (Rule.Error {})
-expressionVisitor node =
+type alias Context =
+    { extractSourceCode : Range -> String
+    }
+
+
+initContext : Rule.ContextCreator () Context
+initContext =
+    Rule.initContextCreator
+        (\extractSourceCode () -> { extractSourceCode = extractSourceCode })
+        |> Rule.withSourceCodeExtractor
+
+
+expressionVisitor : Node Expression -> Context -> ( List (Rule.Error {}), Context )
+expressionVisitor node context =
     case Node.value node of
         Expression.LetExpression letBlock ->
-            visitLetExpression (Node.range node) letBlock
+            ( visitLetExpression context.extractSourceCode (Node.range node) letBlock, context )
 
         _ ->
-            []
+            ( [], context )
 
 
-visitLetExpression : Range -> Expression.LetBlock -> List (Rule.Error {})
-visitLetExpression nodeRange { declarations, expression } =
+visitLetExpression : (Range -> String) -> Range -> Expression.LetBlock -> List (Rule.Error {})
+visitLetExpression extractSourceCode nodeRange { declarations, expression } =
     case Node.value expression of
         Expression.FunctionOrValue [] name ->
             let
-                declarationData :
-                    { previousEnd : Maybe Location
-                    , lastEnd : Maybe Location
-                    , last : Maybe { name : String, expressionRange : Range }
-                    , foundDeclaredWithName : Bool
-                    }
-                declarationData =
-                    getDeclarationsData name declarations
+                maybeResolution : Maybe Resolution
+                maybeResolution =
+                    findDeclarationToMove name declarations
             in
-            if declarationData.foundDeclaredWithName then
-                [ Rule.errorWithFix
-                    { message = "The referenced value should be inlined."
-                    , details =
-                        [ "The name of the value is redundant with the surrounding expression."
-                        , "If you believe that the expression needs a name because it is too complex, consider splitting the expression up more or extracting it to a new function."
-                        ]
-                    }
-                    (Node.range expression)
-                    (fix nodeRange name declarationData)
-                ]
+            case maybeResolution of
+                Just resolution ->
+                    [ Rule.errorWithFix
+                        { message = "The referenced value should be inlined."
+                        , details =
+                            [ "The name of the value is redundant with the surrounding expression."
+                            , "If you believe that the expression needs a name because it is too complex, consider splitting the expression up more or extracting it to a new function."
+                            ]
+                        }
+                        (Node.range expression)
+                        (fix extractSourceCode nodeRange (Node.range expression) resolution)
+                    ]
 
-            else
-                []
+                Nothing ->
+                    []
 
         _ ->
             []
 
 
-getDeclarationsData :
-    String
-    -> List (Node Expression.LetDeclaration)
-    ->
-        { previousEnd : Maybe Location
-        , lastEnd : Maybe Location
-        , last : Maybe { name : String, expressionRange : Range }
-        , foundDeclaredWithName : Bool
+type Resolution
+    = ReportNoFix
+    | Move { toRemove : Range, toCopy : Range }
+    | RemoveOnly { toCopy : Range }
+    | MoveLast { previousEnd : Location, toCopy : Range }
+
+
+findDeclarationToMove : String -> List (Node Expression.LetDeclaration) -> Maybe Resolution
+findDeclarationToMove name declarations =
+    findDeclarationToMoveHelp
+        name
+        (List.length declarations)
+        declarations
+        { index = 0
+        , previousEnd = Nothing
+        , lastEnd = Nothing
         }
-getDeclarationsData name declarations =
-    List.foldl
-        (\declaration { lastEnd, foundDeclaredWithName } ->
+
+
+findDeclarationToMoveHelp : String -> Int -> List (Node Expression.LetDeclaration) -> { index : Int, previousEnd : Maybe Location, lastEnd : Maybe Location } -> Maybe Resolution
+findDeclarationToMoveHelp name nbOfDeclarations declarations { index, previousEnd, lastEnd } =
+    case declarations of
+        [] ->
+            Nothing
+
+        declaration :: rest ->
             case Node.value declaration of
                 Expression.LetFunction function ->
                     let
                         functionDeclaration : Expression.FunctionImplementation
                         functionDeclaration =
                             Node.value function.declaration
-                    in
-                    { previousEnd = lastEnd
-                    , lastEnd = Just (Node.range functionDeclaration.expression).end
-                    , last =
-                        if List.isEmpty functionDeclaration.arguments then
-                            Just
-                                { name = Node.value functionDeclaration.name
-                                , expressionRange = Node.range functionDeclaration.expression
-                                }
 
-                        else
-                            Nothing
-                    , foundDeclaredWithName = foundDeclaredWithName || Node.value functionDeclaration.name == name
-                    }
+                        functionName : String
+                        functionName =
+                            Node.value functionDeclaration.name
+                    in
+                    if functionName == name then
+                        let
+                            isLast : Bool
+                            isLast =
+                                index == nbOfDeclarations - 1
+                        in
+                        Just
+                            (createResolution
+                                { declaration = declaration, functionDeclaration = functionDeclaration }
+                                { lastEnd = lastEnd, previousEnd = previousEnd }
+                                isLast
+                            )
+
+                    else
+                        findDeclarationToMoveHelp
+                            name
+                            nbOfDeclarations
+                            rest
+                            { index = index + 1
+                            , previousEnd = lastEnd
+                            , lastEnd = Just (Node.range declaration).end
+                            }
 
                 Expression.LetDestructuring _ _ ->
-                    { previousEnd = lastEnd
-                    , lastEnd = Just (Node.range declaration).end
-                    , last = Nothing
-                    , foundDeclaredWithName = foundDeclaredWithName
-                    }
-        )
-        { previousEnd = Nothing
-        , lastEnd = Nothing
-        , last = Nothing
-        , foundDeclaredWithName = False
-        }
-        declarations
+                    findDeclarationToMoveHelp
+                        name
+                        nbOfDeclarations
+                        rest
+                        { index = index + 1
+                        , previousEnd = lastEnd
+                        , lastEnd = Just (Node.range declaration).end
+                        }
+
+
+createResolution : { declaration : Node b, functionDeclaration : Expression.FunctionImplementation } -> { lastEnd : Maybe Location, previousEnd : Maybe Location } -> Bool -> Resolution
+createResolution { declaration, functionDeclaration } { lastEnd, previousEnd } isLast =
+    if not (List.isEmpty functionDeclaration.arguments) then
+        ReportNoFix
+
+    else
+        case lastEnd of
+            Just lastEnd_ ->
+                if isLast then
+                    MoveLast
+                        { previousEnd = lastEnd_
+                        , toCopy = Node.range functionDeclaration.expression
+                        }
+
+                else
+                    Move
+                        { toRemove =
+                            { start = Maybe.withDefault (Node.range declaration).start previousEnd
+                            , end = (Node.range declaration).end
+                            }
+                        , toCopy = Node.range functionDeclaration.expression
+                        }
+
+            Nothing ->
+                if isLast then
+                    RemoveOnly { toCopy = Node.range functionDeclaration.expression }
+
+                else
+                    Move
+                        { toRemove =
+                            { start = Maybe.withDefault (Node.range declaration).start previousEnd
+                            , end = (Node.range declaration).end
+                            }
+                        , toCopy = Node.range functionDeclaration.expression
+                        }
 
 
 fix :
-    Range
-    -> String
-    ->
-        { r
-            | previousEnd : Maybe Location
-            , last : Maybe { name : String, expressionRange : Range }
-        }
+    (Range -> String)
+    -> Range
+    -> Range
+    -> Resolution
     -> List Fix
-fix nodeRange name declarationData =
-    case declarationData.last of
-        Just last ->
-            if last.name == name then
-                case declarationData.previousEnd of
-                    Nothing ->
-                        -- It's the only element in the destructuring, we should remove move of the let expression
-                        [ Fix.removeRange { start = nodeRange.start, end = last.expressionRange.start }
-                        , Fix.removeRange { start = last.expressionRange.end, end = nodeRange.end }
-                        ]
-
-                    Just previousEnd ->
-                        -- There are other elements in the let body that we need to keep
-                        let
-                            indentation : String
-                            indentation =
-                                String.repeat (nodeRange.start.column - 1) " "
-                        in
-                        [ Fix.replaceRangeBy { start = previousEnd, end = last.expressionRange.start } ("\n" ++ indentation ++ "in\n" ++ indentation)
-                        , Fix.removeRange { start = last.expressionRange.end, end = nodeRange.end }
-                        ]
-
-            else
-                []
-
-        Nothing ->
+fix extractSourceCode nodeRange letBodyRange resolution =
+    case resolution of
+        ReportNoFix ->
             []
+
+        RemoveOnly { toCopy } ->
+            -- Remove the let/in keywords and the let binding
+            [ Fix.removeRange { start = nodeRange.start, end = toCopy.start }
+            , Fix.removeRange { start = toCopy.end, end = nodeRange.end }
+            ]
+
+        Move { toRemove, toCopy } ->
+            [ Fix.removeRange
+                { start =
+                    if nodeRange.start.row == toRemove.start.row then
+                        toRemove.start
+
+                    else
+                        { row = toRemove.start.row, column = 1 }
+                , end = toRemove.end
+                }
+            , Fix.replaceRangeBy
+                letBodyRange
+                (extractSourceCode toCopy)
+            ]
+
+        MoveLast { previousEnd, toCopy } ->
+            let
+                indentation : String
+                indentation =
+                    String.repeat (nodeRange.start.column - 1) " "
+            in
+            [ Fix.replaceRangeBy { start = previousEnd, end = toCopy.start } ("\n" ++ indentation ++ "in\n" ++ indentation)
+            , Fix.removeRange { start = toCopy.end, end = nodeRange.end }
+            ]

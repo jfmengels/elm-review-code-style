@@ -43,7 +43,8 @@ a = 1
 a = let
         c = 2
         b = c
-    in b
+    in
+    b
 """
                     |> Review.Test.run rule
                     |> Review.Test.expectErrors
@@ -55,7 +56,7 @@ a = let
                                 ]
                             , under = "b"
                             }
-                            |> Review.Test.atExactly { start = { row = 5, column = 8 }, end = { row = 5, column = 9 } }
+                            |> Review.Test.atExactly { start = { row = 6, column = 5 }, end = { row = 6, column = 6 } }
                             |> Review.Test.whenFixed """module A exposing (..)
 a = let
         c = 2
@@ -69,7 +70,8 @@ a = let
 a = let
         b = c
         c = 2
-    in b
+    in
+    b
 """
                     |> Review.Test.run rule
                     |> Review.Test.expectErrors
@@ -81,7 +83,14 @@ a = let
                                 ]
                             , under = "b"
                             }
-                            |> Review.Test.atExactly { start = { row = 5, column = 8 }, end = { row = 5, column = 9 } }
+                            |> Review.Test.atExactly { start = { row = 6, column = 5 }, end = { row = 6, column = 6 } }
+                            |> Review.Test.whenFixed """module A exposing (..)
+a = let
+
+        c = 2
+    in
+    c
+"""
                         ]
         , test "should report an error but not suggest a fix when value is not the last declaration (last is destructuring)" <|
             \() ->
@@ -102,6 +111,12 @@ a = let
                             , under = "b"
                             }
                             |> Review.Test.atExactly { start = { row = 5, column = 8 }, end = { row = 5, column = 9 } }
+                            |> Review.Test.whenFixed """module A exposing (..)
+a = let
+
+        {c} = 2
+    in c
+"""
                         ]
         , test "should report an error but not suggest a fix when value is a function that takes arguments" <|
             \() ->
@@ -139,7 +154,7 @@ a = let b = 1
 """
                     |> Review.Test.run rule
                     |> Review.Test.expectNoErrors
-        , test "should not report an error if the return value was destructured in the let" <|
+        , test "should not report an error if the return value was partially destructured in the let" <|
             \() ->
                 """module A exposing (..)
 a1 = let (b, _) = 1
