@@ -109,17 +109,7 @@ expressionVisitor node context =
 
 visitLetExpression : (Range -> String) -> Range -> Expression.LetBlock -> List (Rule.Error {})
 visitLetExpression extractSourceCode nodeRange { declarations, expression } =
-    let
-        checkPatternToFind : Maybe PatternToFind
-        checkPatternToFind =
-            case Node.value expression of
-                Expression.FunctionOrValue [] name ->
-                    Just (Reference name)
-
-                _ ->
-                    Nothing
-    in
-    case checkPatternToFind of
+    case checkPatternToFind expression of
         Just patternToFind ->
             let
                 maybeResolution : Maybe Resolution
@@ -144,6 +134,16 @@ visitLetExpression extractSourceCode nodeRange { declarations, expression } =
 
         _ ->
             []
+
+
+checkPatternToFind : Node Expression -> Maybe PatternToFind
+checkPatternToFind expression =
+    case Node.value expression of
+        Expression.FunctionOrValue [] name ->
+            Just (Reference name)
+
+        _ ->
+            Nothing
 
 
 type PatternToFind
