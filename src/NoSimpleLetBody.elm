@@ -142,12 +142,25 @@ checkPatternToFind expression =
         Expression.FunctionOrValue [] name ->
             Just (Reference name)
 
+        Expression.TupledExpression elements ->
+            let
+                patternsToFind : List PatternToFind
+                patternsToFind =
+                    List.filterMap checkPatternToFind elements
+            in
+            if List.length patternsToFind == List.length elements then
+                Just (TuplePattern patternsToFind)
+
+            else
+                Nothing
+
         _ ->
             Nothing
 
 
 type PatternToFind
     = Reference String
+    | TuplePattern (List PatternToFind)
 
 
 type Resolution
@@ -233,6 +246,13 @@ matchPatternToFind patternToFind destructuringPattern =
             refName == name
 
         ( Reference _, _ ) ->
+            False
+
+        ( TuplePattern left, Pattern.TuplePattern right ) ->
+            List.map2 matchPatternToFind left right
+                |> List.all identity
+
+        ( TuplePattern _, _ ) ->
             False
 
 
