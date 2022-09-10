@@ -180,7 +180,7 @@ findDeclarationToMoveHelp patternToFind nbOfDeclarations declarations { index, p
                         in
                         Just
                             (createResolution
-                                { declaration = declaration, functionDeclaration = functionDeclaration }
+                                { declaration = declaration, functionDeclaration = functionDeclaration, expressionRange = Node.range functionDeclaration.expression }
                                 { lastEnd = lastEnd, previousEnd = previousEnd }
                                 isLast
                             )
@@ -206,8 +206,8 @@ findDeclarationToMoveHelp patternToFind nbOfDeclarations declarations { index, p
                         }
 
 
-createResolution : { declaration : Node b, functionDeclaration : Expression.FunctionImplementation } -> { lastEnd : Maybe Location, previousEnd : Maybe Location } -> Bool -> Resolution
-createResolution { declaration, functionDeclaration } { lastEnd, previousEnd } isLast =
+createResolution : { declaration : Node b, functionDeclaration : Expression.FunctionImplementation, expressionRange : Range } -> { lastEnd : Maybe Location, previousEnd : Maybe Location } -> Bool -> Resolution
+createResolution { declaration, functionDeclaration, expressionRange } { lastEnd, previousEnd } isLast =
     if not (List.isEmpty functionDeclaration.arguments) then
         ReportNoFix
 
@@ -217,7 +217,7 @@ createResolution { declaration, functionDeclaration } { lastEnd, previousEnd } i
                 if isLast then
                     MoveLast
                         { previousEnd = lastEnd_
-                        , toCopy = Node.range functionDeclaration.expression
+                        , toCopy = expressionRange
                         }
 
                 else
@@ -226,12 +226,12 @@ createResolution { declaration, functionDeclaration } { lastEnd, previousEnd } i
                             { start = Maybe.withDefault (Node.range declaration).start previousEnd
                             , end = (Node.range declaration).end
                             }
-                        , toCopy = Node.range functionDeclaration.expression
+                        , toCopy = expressionRange
                         }
 
             Nothing ->
                 if isLast then
-                    RemoveOnly { toCopy = Node.range functionDeclaration.expression }
+                    RemoveOnly { toCopy = expressionRange }
 
                 else
                     Move
@@ -239,7 +239,7 @@ createResolution { declaration, functionDeclaration } { lastEnd, previousEnd } i
                             { start = Maybe.withDefault (Node.range declaration).start previousEnd
                             , end = (Node.range declaration).end
                             }
-                        , toCopy = Node.range functionDeclaration.expression
+                        , toCopy = expressionRange
                         }
 
 
