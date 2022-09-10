@@ -8,6 +8,7 @@ module NoSimpleLetBody exposing (rule)
 
 import Elm.Syntax.Expression as Expression exposing (Expression)
 import Elm.Syntax.Node as Node exposing (Node)
+import Elm.Syntax.Pattern as Pattern exposing (Pattern)
 import Elm.Syntax.Range exposing (Location, Range)
 import Review.Fix as Fix exposing (Fix)
 import Review.Rule as Rule exposing (Rule)
@@ -215,9 +216,13 @@ findDeclarationToMoveHelp patternToFind nbOfDeclarations declarations { index, p
                         }
 
 
+matchPatternToFind : PatternToFind -> Node Pattern -> Bool
 matchPatternToFind patternToFind destructuringPattern =
-    case patternToFind of
-        Reference _ ->
+    case ( patternToFind, Node.value destructuringPattern ) of
+        ( Reference refName, Pattern.VarPattern name ) ->
+            refName == name
+
+        ( Reference _, _ ) ->
             False
 
 
