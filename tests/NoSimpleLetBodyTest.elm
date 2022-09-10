@@ -178,7 +178,7 @@ a = let (b, c) = xyz
                                 [ "The name of the value is redundant with the surrounding expression."
                                 , "If you believe that the expression needs a name because it is too complex, consider splitting the expression up more or extracting it to a new function."
                                 ]
-                            , under = "b"
+                            , under = "( b, c )"
                             }
                             |> Review.Test.atExactly { start = { row = 5, column = 8 }, end = { row = 5, column = 9 } }
                             |> Review.Test.whenFixed """module A exposing (..)
