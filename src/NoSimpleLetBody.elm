@@ -7,7 +7,7 @@ module NoSimpleLetBody exposing (rule)
 -}
 
 import Elm.Syntax.Expression as Expression exposing (Expression)
-import Elm.Syntax.Node as Node exposing (Node)
+import Elm.Syntax.Node as Node exposing (Node(..))
 import Elm.Syntax.Pattern as Pattern exposing (Pattern)
 import Elm.Syntax.Range exposing (Location, Range)
 import Review.Fix as Fix exposing (Fix)
@@ -157,6 +157,18 @@ checkPatternToFind expression =
             else
                 Nothing
 
+        Expression.Application ((Node _ (Expression.FunctionOrValue moduleName name)) :: args) ->
+            let
+                patternsToFind : List PatternToFind
+                patternsToFind =
+                    List.filterMap checkPatternToFind args
+            in
+            if List.length patternsToFind == List.length args then
+                Just (NamedPattern { moduleName = moduleName, name = name } patternsToFind)
+
+            else
+                Nothing
+
         _ ->
             Nothing
 
@@ -164,6 +176,7 @@ checkPatternToFind expression =
 type PatternToFind
     = Reference String
     | TuplePattern (List PatternToFind)
+    | NamedPattern Pattern.QualifiedNameRef (List PatternToFind)
 
 
 type Resolution
@@ -259,6 +272,13 @@ matchPatternToFind patternToFind destructuringPattern =
                 |> List.all identity
 
         ( TuplePattern _, _ ) ->
+            False
+
+        ( NamedPattern refLeft argsLeft, Pattern.NamedPattern refRight argsRight ) ->
+            (refLeft == refRight)
+                && (List.map2 matchPatternToFind argsLeft argsRight |> List.all identity)
+
+        ( NamedPattern _ _, _ ) ->
             False
 
 
