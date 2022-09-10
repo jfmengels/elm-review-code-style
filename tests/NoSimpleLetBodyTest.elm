@@ -180,7 +180,6 @@ a = let (b, c) = xyz
                                 ]
                             , under = "( b, c )"
                             }
-                            |> Review.Test.atExactly { start = { row = 5, column = 8 }, end = { row = 5, column = 9 } }
                             |> Review.Test.whenFixed """module A exposing (..)
 a = xyz
 """
