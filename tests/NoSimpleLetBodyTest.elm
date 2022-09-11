@@ -192,6 +192,14 @@ a = let (b, c) = xyz
 """
                     |> Review.Test.run rule
                     |> Review.Test.expectNoErrors
+        , test "should not report an error if the return is the tuple with less elements than what was destructured" <|
+            \() ->
+                """module A exposing (..)
+a = let (b, c, d ) = xyz
+    in ( b, c )
+"""
+                    |> Review.Test.run rule
+                    |> Review.Test.expectNoErrors
         , test "should report an error if the return value was fully destructured in the let (body wrapped in parens)" <|
             \() ->
                 """module A exposing (..)
