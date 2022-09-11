@@ -6,12 +6,14 @@ module NoSimpleLetBody exposing (rule)
 
 -}
 
+import Elm.Syntax.Declaration as Declaration exposing (Declaration)
 import Elm.Syntax.Expression as Expression exposing (Expression)
 import Elm.Syntax.Node as Node exposing (Node(..))
 import Elm.Syntax.Pattern as Pattern exposing (Pattern)
 import Elm.Syntax.Range exposing (Location, Range)
 import Review.Fix as Fix exposing (Fix)
 import Review.Rule as Rule exposing (Rule)
+import Set exposing (Set)
 
 
 {-| Reports when a let expression's body is a simple reference to a value declared in the let expression.
@@ -81,35 +83,72 @@ elm-review --template jfmengels/elm-review-code-style/example --rules NoSimpleLe
 rule : Rule
 rule =
     Rule.newModuleRuleSchemaUsingContextCreator "NoSimpleLetBody" initContext
+        |> Rule.withDeclarationListVisitor declarationListVisitor
         |> Rule.withExpressionEnterVisitor expressionVisitor
         |> Rule.fromModuleRuleSchema
 
 
 type alias Context =
     { extractSourceCode : Range -> String
+    , constructorsToReport : Set String
     }
 
 
 initContext : Rule.ContextCreator () Context
 initContext =
     Rule.initContextCreator
-        (\extractSourceCode () -> { extractSourceCode = extractSourceCode })
+        (\extractSourceCode () ->
+            { extractSourceCode = extractSourceCode
+            , constructorsToReport = Set.empty
+            }
+        )
         |> Rule.withSourceCodeExtractor
+
+
+declarationListVisitor : List (Node Declaration) -> Context -> ( List nothing, Context )
+declarationListVisitor declarations context =
+    let
+        constructorsToReport : Set String
+        constructorsToReport =
+            declarations
+                |> List.filterMap safelyDestructurableConstructor
+                |> Set.fromList
+    in
+    ( [], { context | constructorsToReport = constructorsToReport } )
+
+
+safelyDestructurableConstructor : Node Declaration -> Maybe String
+safelyDestructurableConstructor node =
+    case Node.value node of
+        Declaration.CustomTypeDeclaration { generics, constructors } ->
+            if List.isEmpty generics then
+                case constructors of
+                    [ constructor ] ->
+                        Just (Node.value constructor |> .name |> Node.value)
+
+                    _ ->
+                        Nothing
+
+            else
+                Nothing
+
+        _ ->
+            Nothing
 
 
 expressionVisitor : Node Expression -> Context -> ( List (Rule.Error {}), Context )
 expressionVisitor node context =
     case Node.value node of
         Expression.LetExpression letBlock ->
-            ( visitLetExpression context.extractSourceCode (Node.range node) letBlock, context )
+            ( visitLetExpression context (Node.range node) letBlock, context )
 
         _ ->
             ( [], context )
 
 
-visitLetExpression : (Range -> String) -> Range -> Expression.LetBlock -> List (Rule.Error {})
-visitLetExpression extractSourceCode nodeRange { declarations, expression } =
-    case checkPatternToFind expression of
+visitLetExpression : Context -> Range -> Expression.LetBlock -> List (Rule.Error {})
+visitLetExpression { extractSourceCode, constructorsToReport } nodeRange { declarations, expression } =
+    case checkPatternToFind constructorsToReport expression of
         Just patternToFind ->
             let
                 maybeResolution : Maybe Resolution
@@ -136,11 +175,11 @@ visitLetExpression extractSourceCode nodeRange { declarations, expression } =
             []
 
 
-checkPatternToFind : Node Expression -> Maybe PatternToFind
-checkPatternToFind expression =
+checkPatternToFind : Set String -> Node Expression -> Maybe PatternToFind
+checkPatternToFind constructorsToReport expression =
     case Node.value expression of
         Expression.ParenthesizedExpression expr ->
-            checkPatternToFind expr
+            checkPatternToFind constructorsToReport expr
 
         Expression.FunctionOrValue [] name ->
             Just (Reference name)
@@ -149,7 +188,7 @@ checkPatternToFind expression =
             let
                 patternsToFind : List PatternToFind
                 patternsToFind =
-                    List.filterMap checkPatternToFind elements
+                    List.filterMap (checkPatternToFind constructorsToReport) elements
             in
             if List.length patternsToFind == List.length elements then
                 Just (TuplePattern patternsToFind)
@@ -157,14 +196,19 @@ checkPatternToFind expression =
             else
                 Nothing
 
-        Expression.Application ((Node _ (Expression.FunctionOrValue moduleName name)) :: args) ->
-            let
-                patternsToFind : List PatternToFind
-                patternsToFind =
-                    List.filterMap checkPatternToFind args
-            in
-            if List.length patternsToFind == List.length args then
-                Just (NamedPattern { moduleName = moduleName, name = name } patternsToFind)
+        Expression.Application ((Node _ (Expression.FunctionOrValue [] name)) :: args) ->
+            -- TODO Support constructors from other modules
+            if Set.member name constructorsToReport then
+                let
+                    patternsToFind : List PatternToFind
+                    patternsToFind =
+                        List.filterMap (checkPatternToFind constructorsToReport) args
+                in
+                if List.length patternsToFind == List.length args then
+                    Just (NamedPattern { moduleName = [], name = name } patternsToFind)
+
+                else
+                    Nothing
 
             else
                 Nothing
@@ -277,6 +321,7 @@ matchPatternToFind patternToFind destructuringPattern =
             False
 
         ( NamedPattern refLeft argsLeft, Pattern.NamedPattern refRight argsRight ) ->
+            -- TODO Is only safe when there are no value phantom types?
             (refLeft == refRight)
                 && (List.map2 matchPatternToFind argsLeft argsRight |> List.all identity)
 

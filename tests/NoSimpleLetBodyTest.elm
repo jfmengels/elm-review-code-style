@@ -243,6 +243,7 @@ a = xyz
         , test "should report an error if the return value was fully destructured in the let (named pattern)" <|
             \() ->
                 """module A exposing (..)
+type A = A String
 a = let (A  b) = xyz
     in A b
 """
@@ -257,9 +258,37 @@ a = let (A  b) = xyz
                             , under = "A b"
                             }
                             |> Review.Test.whenFixed """module A exposing (..)
+type A = A String
 a = xyz
 """
                         ]
+        , test "should not report named pattern when the type is unknown" <|
+            \() ->
+                """module A exposing (..)
+import B exposing (..)
+a = let (A b) = xyz
+    in A b
+"""
+                    |> Review.Test.run rule
+                    |> Review.Test.expectNoErrors
+        , test "should not report named pattern when the type has a phantom type variable" <|
+            \() ->
+                """module A exposing (..)
+type A b = A String
+a = let (A b) = xyz
+    in A b
+"""
+                    |> Review.Test.run rule
+                    |> Review.Test.expectNoErrors
+        , test "should report named pattern when the type has a non-phantom type variable" <|
+            \() ->
+                """module A exposing (..)
+type A b = A b
+a = let (A b) = xyz
+    in A b
+"""
+                    |> Review.Test.run rule
+                    |> Review.Test.expectNoErrors
         , test "should not report an error if the return value is a reference to another module's value with the same name as something declared" <|
             \() ->
                 """module A exposing (..)
