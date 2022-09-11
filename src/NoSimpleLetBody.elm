@@ -268,8 +268,10 @@ matchPatternToFind patternToFind destructuringPattern =
             False
 
         ( TuplePattern left, Pattern.TuplePattern right ) ->
-            List.map2 matchPatternToFind left right
-                |> List.all identity
+            (List.length left == List.length right)
+                && (List.map2 matchPatternToFind left right
+                        |> List.all identity
+                   )
 
         ( TuplePattern _, _ ) ->
             False
