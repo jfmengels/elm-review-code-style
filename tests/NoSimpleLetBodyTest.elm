@@ -184,6 +184,14 @@ a = let (b, c) = xyz
 a = xyz
 """
                         ]
+        , test "should not report an error if the return is the tuple in a different order than what was destructured" <|
+            \() ->
+                """module A exposing (..)
+a = let (b, c) = xyz
+    in ( c, b )
+"""
+                    |> Review.Test.run rule
+                    |> Review.Test.expectNoErrors
         , test "should report an error if the return value was fully destructured in the let (body wrapped in parens)" <|
             \() ->
                 """module A exposing (..)
