@@ -249,36 +249,7 @@ findDeclarationToMoveHelp patternToFind nbOfDeclarations declarations { index, p
             Nothing
 
         declaration :: rest ->
-            let
-                match : Maybe { hasArguments : Bool, expressionRange : Range }
-                match =
-                    case Node.value declaration of
-                        Expression.LetFunction function ->
-                            let
-                                functionDeclaration : Expression.FunctionImplementation
-                                functionDeclaration =
-                                    Node.value function.declaration
-                            in
-                            if Reference (Node.value functionDeclaration.name) == patternToFind then
-                                Just
-                                    { hasArguments = not (List.isEmpty functionDeclaration.arguments)
-                                    , expressionRange = Node.range functionDeclaration.expression
-                                    }
-
-                            else
-                                Nothing
-
-                        Expression.LetDestructuring destructuringPattern expression ->
-                            if matchPatternToFind patternToFind destructuringPattern then
-                                Just
-                                    { hasArguments = False
-                                    , expressionRange = Node.range expression
-                                    }
-
-                            else
-                                Nothing
-            in
-            case match of
+            case match declaration patternToFind of
                 Just matchParams ->
                     Just
                         (createResolution
@@ -297,6 +268,35 @@ findDeclarationToMoveHelp patternToFind nbOfDeclarations declarations { index, p
                         , previousEnd = lastEnd
                         , lastEnd = Just (Node.range declaration).end
                         }
+
+
+match : Node Expression.LetDeclaration -> PatternToFind -> Maybe { hasArguments : Bool, expressionRange : Range }
+match declaration patternToFind =
+    case Node.value declaration of
+        Expression.LetFunction function ->
+            let
+                functionDeclaration : Expression.FunctionImplementation
+                functionDeclaration =
+                    Node.value function.declaration
+            in
+            if Reference (Node.value functionDeclaration.name) == patternToFind then
+                Just
+                    { hasArguments = not (List.isEmpty functionDeclaration.arguments)
+                    , expressionRange = Node.range functionDeclaration.expression
+                    }
+
+            else
+                Nothing
+
+        Expression.LetDestructuring destructuringPattern expression ->
+            if matchPatternToFind patternToFind destructuringPattern then
+                Just
+                    { hasArguments = False
+                    , expressionRange = Node.range expression
+                    }
+
+            else
+                Nothing
 
 
 matchPatternToFind : PatternToFind -> Node Pattern -> Bool
