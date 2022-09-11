@@ -25,6 +25,8 @@ import Set exposing (Set)
 
 {-| Reports unnecessary or suboptimal trailing underscores in variable names.
 
+🔧 Running with `--fix` will automatically remove most of the reported errors.
+
     config =
         [ NoUnnecessaryTrailingUnderscore.rule
         ]
