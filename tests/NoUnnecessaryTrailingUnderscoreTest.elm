@@ -8,7 +8,7 @@ import Test exposing (Test, describe, test)
 details : List String
 details =
     [ "It looks like this was used to avoid a shadowing issue, but the variable it would have clashed with is not present in the scope of where this variable was declared anymore. You should rename the variable and remove the underscore."
-    , "Note that this may not be a safe change, in that renaming may clash with a value declared deeper in the expression, but I think it's less confusing to have the nested variable have a trailing underscore rather than the variable declared higher-up."
+    , "Note that this may not be a safe change, in that renaming may clash with a value declared deeper in the expression, but I think it's less confusing to have the nested variable have a trailing underscore rather than the variable declared higher up."
     ]
 
 
@@ -290,6 +290,35 @@ value = 1
 """
                     |> Review.Test.run rule
                     |> Review.Test.expectNoErrors
+        , test "should not report an error if something was imported using the name without the _" <|
+            \() ->
+                """module A exposing (..)
+import B exposing (value)
+a value_ = 1
+"""
+                    |> Review.Test.run rule
+                    |> Review.Test.expectNoErrors
+        , test "should not report an error if something was imported using the name without the _ (from a dependency)" <|
+            \() ->
+                """module A exposing (..)
+import Maybe exposing (..)
+a withDefault_ = 1
+"""
+                    |> Review.Test.run rule
+                    |> Review.Test.expectNoErrors
+        , test "should not report an error if something was imported using the name without the _ (from other module)" <|
+            \() ->
+                [ """module A exposing (..)
+import B exposing (..)
+import C exposing (..)
+a value_ otherValue_ = 1
+""", """module B exposing (..)
+value = 1
+""", """module C exposing (otherValue)
+otherValue = 1
+""" ]
+                    |> Review.Test.runOnModules rule
+                    |> Review.Test.expectNoErrors
         , test "should not report an error if a argument is already named without the _" <|
             \() ->
                 """module A exposing (..)
@@ -448,6 +477,41 @@ a = let (Value value_) = 1
 a = let (Value value) = 1
     in value
 """
+                        ]
+        , test "should be able to rename when the value is used in a record update" <|
+            \() ->
+                """module A exposing (..)
+a = let (Value value_) = 1
+    in { value_ | a = 1 }
+"""
+                    |> Review.Test.run rule
+                    |> Review.Test.expectErrors
+                        [ Review.Test.error
+                            { message = "value_ should not end with an underscore"
+                            , details = details
+                            , under = "value_"
+                            }
+                            |> Review.Test.atExactly { start = { row = 2, column = 16 }, end = { row = 2, column = 22 } }
+                            |> Review.Test.whenFixed """module A exposing (..)
+a = let (Value value) = 1
+    in { value | a = 1 }
+"""
+                        ]
+        , test "should not offer a fix when renaming would create a conflict" <|
+            \() ->
+                """module A exposing (..)
+a value_ =
+    let (Value value) = value_
+    in value
+"""
+                    |> Review.Test.run rule
+                    |> Review.Test.expectErrors
+                        [ Review.Test.error
+                            { message = "value_ should not end with an underscore"
+                            , details = details
+                            , under = "value_"
+                            }
+                            |> Review.Test.atExactly { start = { row = 2, column = 3 }, end = { row = 2, column = 9 } }
                         ]
         , test "should not report names from let declaration patterns when the pattern is a record pattern" <|
             \() ->
