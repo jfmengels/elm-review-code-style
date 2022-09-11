@@ -298,6 +298,13 @@ a value_ = 1
 """
                     |> Review.Test.run rule
                     |> Review.Test.expectNoErrors
+        , test "should not report an error if something was imported using the name without the _ (from prelude)" <|
+            \() ->
+                """module A exposing (..)
+a max_ = 1
+"""
+                    |> Review.Test.run rule
+                    |> Review.Test.expectNoErrors
         , test "should not report an error if something was imported using the name without the _ (from a dependency)" <|
             \() ->
                 """module A exposing (..)

@@ -214,7 +214,7 @@ fromProjectToModule : Rule.ContextCreator ProjectContext ModuleContext
 fromProjectToModule =
     Rule.initContextCreator
         (\projectContext ->
-            { scopes = ( Dict.empty, [] )
+            { scopes = ( importedFromBasics, [] )
             , scopesToAdd = Dict.empty
             , exposedFunctionsFromModule = projectContext
             }
@@ -854,3 +854,46 @@ rangeToRangeLike range =
     , range.end.row
     , range.end.column
     ]
+
+
+importedFromBasics : Scope
+importedFromBasics =
+    [ "toFloat"
+    , "round"
+    , "floor"
+    , "ceiling"
+    , "truncate"
+    , "max"
+    , "min"
+    , "compare"
+    , "not"
+    , "xor"
+    , "modBy"
+    , "remainderBy"
+    , "negate"
+    , "abs"
+    , "clamp"
+    , "sqrt"
+    , "logBase"
+    , "e"
+    , "pi"
+    , "cos"
+    , "sin"
+    , "tan"
+    , "acos"
+    , "asin"
+    , "atan"
+    , "atan2"
+    , "degrees"
+    , "radians"
+    , "turns"
+    , "toPolar"
+    , "fromPolar"
+    , "isNaN"
+    , "isInfinite"
+    , "identity"
+    , "always"
+    , "never"
+    ]
+        |> List.map (\name -> ( name, [] ))
+        |> Dict.fromList
