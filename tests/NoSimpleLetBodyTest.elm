@@ -281,6 +281,7 @@ a = let (A b) = xyz
                     |> Review.Test.run rule
                     |> Review.Test.expectNoErrors
         , test "should report named pattern when the type has a non-phantom type variable" <|
+            -- TODO This should be reported (see https://github.com/jfmengels/elm-review-code-style/issues/6)
             \() ->
                 """module A exposing (..)
 type A b = A b
