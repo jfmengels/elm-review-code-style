@@ -12,10 +12,12 @@ when inside the directory containing this file.
 -}
 
 import NoSimpleLetBody
+import NoUnnecessaryTrailingUnderscore
 import Review.Rule exposing (Rule)
 
 
 config : List Rule
 config =
-    [ NoSimpleLetBody.rule
+    [ NoUnnecessaryTrailingUnderscore.rule
+    , NoSimpleLetBody.rule
     ]
