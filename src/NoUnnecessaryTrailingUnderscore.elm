@@ -336,15 +336,7 @@ declarationListVisitor declarations context =
                 (\node ->
                     case Node.value node of
                         Declaration.FunctionDeclaration function ->
-                            reportFunction
-                                Dict.empty
-                                context.scopes
-                                function
-                                { message = "Top-level declaration names should not end with an underscore"
-                                , details =
-                                    [ "A trailing underscore \"_\" is often used to prevent shadowing issues, but top-level declarations should not resolve these issues in that manner."
-                                    ]
-                                }
+                            reportTopLevelFunction context.scopes function
 
                         _ ->
                             Nothing
@@ -580,19 +572,21 @@ reportErrorsForLet letExpression namesFromLetDeclarations scopes declarations =
             case Node.value node of
                 Expression.LetFunction function ->
                     let
-                        functionName : String
+                        functionName : Node String
                         functionName =
                             function.declaration
                                 |> Node.value
                                 |> .name
-                                |> Node.value
                     in
                     case
-                        reportFunction
+                        error
+                            letExpression
                             namesFromLetDeclarations
                             scopes
-                            function
-                            (defaultErrorAndMessage functionName)
+                            { name = Node.value functionName
+                            , range = Node.range functionName
+                            , origin = NotFromRecord
+                            }
                     of
                         Just newError ->
                             [ newError ]
@@ -612,13 +606,13 @@ reportErrorsForLet letExpression namesFromLetDeclarations scopes declarations =
                                 |> List.map (\var -> ( var.name, [] ))
                                 |> Dict.fromList
                     in
-                    List.filterMap (error letExpression (addNewScope names scopes)) declaredVariables
+                    List.filterMap (error letExpression namesFromLetDeclarations (addNewScope names scopes)) declaredVariables
         )
         declarations
 
 
-reportFunction : Scope -> Scopes -> Expression.Function -> { message : String, details : List String } -> Maybe (Rule.Error {})
-reportFunction namesOnTheSameLevel scopes function messageAndDetails =
+reportTopLevelFunction : Scopes -> Expression.Function -> Maybe (Rule.Error {})
+reportTopLevelFunction scopes function =
     let
         functionNameNode : Node String
         functionNameNode =
@@ -639,24 +633,15 @@ reportFunction namesOnTheSameLevel scopes function messageAndDetails =
             && not (isDefinedInScope scopes functionNameWithoutUnderscore)
             && not (Set.member functionName reservedElmKeywords)
     then
-        if Dict.member functionNameWithoutUnderscore namesOnTheSameLevel then
-            Just
-                (Rule.error
-                    { message = functionName ++ " should not end with an underscore"
-                    , details =
-                        [ "It seems that it has been used to prevent shadowing issues with a variable on the same level, but this is confusing. When should \"" ++ functionName ++ "\" be used and when should \"" ++ functionNameWithoutUnderscore ++ "\" be used?"
-                        , "Please rename this variable in a way that makes it more explicit when or how each should be used."
-                        ]
-                    }
-                    (Node.range functionNameNode)
-                )
-
-        else
-            Just
-                (Rule.error
-                    messageAndDetails
-                    (Node.range functionNameNode)
-                )
+        Just
+            (Rule.error
+                { message = "Top-level declaration names should not end with an underscore"
+                , details =
+                    [ "A trailing underscore \"_\" is often used to prevent shadowing issues, but top-level declarations should not resolve these issues in that manner."
+                    ]
+                }
+                (Node.range functionNameNode)
+            )
 
     else
         Nothing
@@ -680,7 +665,7 @@ report patternsAndBody context =
                                 |> List.map (\var -> ( var.name, [] ))
                                 |> Dict.fromList
                     in
-                    { errors = List.filterMap (error expression (addNewScope names context.scopes)) declaredVariables
+                    { errors = List.filterMap (error expression Dict.empty (addNewScope names context.scopes)) declaredVariables
                     , scopesToAdd =
                         ( rangeToRangeLike (Node.range expression)
                         , names
@@ -714,26 +699,44 @@ popScope ( head, tail ) =
             ( newHead, newTail )
 
 
-error : Node Expression -> Scopes -> ScopeNames -> Maybe (Rule.Error {})
-error expressionToReplaceThingsIn scopes { range, name, origin } =
+error : Node Expression -> Scope -> Scopes -> ScopeNames -> Maybe (Rule.Error {})
+error expressionToReplaceThingsIn namesOnTheSameLevel scopes { range, name, origin } =
+    let
+        nameWithoutUnderscore : String
+        nameWithoutUnderscore =
+            String.dropRight 1 name
+    in
     if
         String.endsWith "_" name
-            && not (isDefinedInScope scopes (String.dropRight 1 name))
+            && not (isDefinedInScope scopes nameWithoutUnderscore)
             && not (Set.member name reservedElmKeywords)
             && shouldNameBeReported origin
     then
-        Just
-            (Rule.errorWithFix
-                (defaultErrorAndMessage name)
-                range
-                (case findUsages name (String.dropRight 1 name) [ expressionToReplaceThingsIn ] [] of
-                    Just usages ->
-                        List.map removeLastCharacter (range :: usages)
-
-                    Nothing ->
-                        []
+        if Dict.member nameWithoutUnderscore namesOnTheSameLevel then
+            Just
+                (Rule.error
+                    { message = name ++ " should not end with an underscore"
+                    , details =
+                        [ "It seems that it has been used to prevent shadowing issues with a variable on the same level, but this is confusing. When should \"" ++ name ++ "\" be used and when should \"" ++ nameWithoutUnderscore ++ "\" be used?"
+                        , "Please rename this variable in a way that makes it more explicit when or how each should be used."
+                        ]
+                    }
+                    range
                 )
-            )
+
+        else
+            Just
+                (Rule.errorWithFix
+                    (defaultErrorAndMessage name)
+                    range
+                    (case findUsages name nameWithoutUnderscore [ expressionToReplaceThingsIn ] [] of
+                        Just usages ->
+                            List.map removeLastCharacter (range :: usages)
+
+                        Nothing ->
+                            []
+                    )
+                )
 
     else
         Nothing
