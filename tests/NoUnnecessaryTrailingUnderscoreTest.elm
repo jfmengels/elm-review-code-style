@@ -459,12 +459,10 @@ a = let value_ = 1
                             , under = "value_"
                             }
                             |> Review.Test.atExactly { start = { row = 2, column = 9 }, end = { row = 2, column = 15 } }
-
-                        -- TODO Provide a fix
-                        --                            |> Review.Test.whenFixed """module A exposing (..)
-                        --a = let value = 1
-                        --    in value
-                        --"""
+                            |> Review.Test.whenFixed """module A exposing (..)
+a = let value = 1
+    in value
+"""
                         ]
         , test "should report names from let declaration patterns" <|
             \() ->
