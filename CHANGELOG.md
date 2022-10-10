@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.1.2] - 2022-10-10
+
+- Fixed an issue where [`NoUnnecessaryTrailingUnderscore`] would forget to update a type annotation when fixing an issue.
+
+
 ## [1.1.1] - 2022-10-10
 
 - Added more automatic fixes for [`NoUnnecessaryTrailingUnderscore`]. Thanks [@lydell](https://github.com/lydell)! ([#10](https://github.com/jfmengels/elm-review-code-style/pull/10))
@@ -54,4 +59,6 @@ Help would be appreciated to fill the blanks!
 [`NoSimpleLetBody`]: (https://package.elm-lang.org/packages/jfmengels/elm-review-code-style/latest/NoSimpleLetBody)
 [`NoUnnecessaryTrailingUnderscore`]: (https://package.elm-lang.org/packages/jfmengels/elm-review-code-style/latest/NoUnnecessaryTrailingUnderscore)
 
+[1.1.2]: https://github.com/jfmengels/elm-review-code-style/releases/tag/1.1.2
+[1.1.1]: https://github.com/jfmengels/elm-review-code-style/releases/tag/1.1.1
 [1.1.0]: https://github.com/jfmengels/elm-review-code-style/releases/tag/1.1.0
