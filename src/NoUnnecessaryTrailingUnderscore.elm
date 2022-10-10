@@ -786,16 +786,6 @@ findUsages targetName intendedName remainingNodes acc =
                     findUsages targetName intendedName (expr :: rest) acc
 
                 Expression.LetExpression letBlock ->
-                    let
-                        extractExpression : Node Expression.LetDeclaration -> Node Expression
-                        extractExpression letExpr =
-                            case Node.value letExpr of
-                                Expression.LetFunction { declaration } ->
-                                    (Node.value declaration).expression
-
-                                Expression.LetDestructuring _ expression ->
-                                    expression
-                    in
                     findUsages targetName intendedName (letBlock.expression :: (List.map extractExpression letBlock.declarations ++ rest)) acc
 
                 Expression.CaseExpression caseBlock ->
@@ -815,6 +805,16 @@ findUsages targetName intendedName remainingNodes acc =
 
                 _ ->
                     findUsages targetName intendedName rest acc
+
+
+extractExpression : Node Expression.LetDeclaration -> Node Expression
+extractExpression letExpr =
+    case Node.value letExpr of
+        Expression.LetFunction { declaration } ->
+            (Node.value declaration).expression
+
+        Expression.LetDestructuring _ expression ->
+            expression
 
 
 removeLastCharacter : Range -> Fix
