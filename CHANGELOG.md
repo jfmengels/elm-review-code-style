@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.1.1] - 2022-10-10
+
+- Added more automatic fixes for [`NoUnnecessaryTrailingUnderscore`]. Thanks [@lydell](https://github.com/lydell)! ([#10](https://github.com/jfmengels/elm-review-code-style/pull/10))
+
 ## [1.1.0] - 2022-09-13
 
 - Add new rule [`NoUnnecessaryTrailingUnderscore`]
