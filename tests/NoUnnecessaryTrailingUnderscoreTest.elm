@@ -448,7 +448,9 @@ a = \\value -> value
         , test "should report names from let declaration functions" <|
             \() ->
                 """module A exposing (..)
-a = let value_ = 1
+a = let
+        value_ : Int
+        value_ = 1
     in value_
 """
                     |> Review.Test.run rule
@@ -458,9 +460,11 @@ a = let value_ = 1
                             , details = details
                             , under = "value_"
                             }
-                            |> Review.Test.atExactly { start = { row = 2, column = 9 }, end = { row = 2, column = 15 } }
+                            |> Review.Test.atExactly { start = { row = 4, column = 9 }, end = { row = 4, column = 15 } }
                             |> Review.Test.whenFixed """module A exposing (..)
-a = let value = 1
+a = let
+        value : Int
+        value = 1
     in value
 """
                         ]

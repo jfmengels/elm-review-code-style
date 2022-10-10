@@ -387,6 +387,7 @@ declarationVisitor node context =
 type alias ScopeNames =
     { name : String
     , range : Range
+    , signatureRange : Maybe Range
     , origin : NameOrigin
     }
 
@@ -400,13 +401,13 @@ getDeclaredVariableNames : Node Pattern -> List ScopeNames
 getDeclaredVariableNames pattern =
     case Node.value pattern of
         Pattern.VarPattern name ->
-            [ { name = name, range = Node.range pattern, origin = NotFromRecord } ]
+            [ { name = name, range = Node.range pattern, signatureRange = Nothing, origin = NotFromRecord } ]
 
         Pattern.ParenthesizedPattern subPattern ->
             getDeclaredVariableNames subPattern
 
         Pattern.AsPattern subPattern name ->
-            { name = Node.value name, range = Node.range name, origin = NotFromRecord } :: getDeclaredVariableNames subPattern
+            { name = Node.value name, range = Node.range name, signatureRange = Nothing, origin = NotFromRecord } :: getDeclaredVariableNames subPattern
 
         Pattern.TuplePattern patterns ->
             List.concatMap getDeclaredVariableNames patterns
@@ -421,7 +422,7 @@ getDeclaredVariableNames pattern =
             List.concatMap getDeclaredVariableNames patterns
 
         Pattern.RecordPattern fields ->
-            List.map (\field -> { name = Node.value field, range = Node.range field, origin = FromRecord }) fields
+            List.map (\field -> { name = Node.value field, range = Node.range field, signatureRange = Nothing, origin = FromRecord }) fields
 
         _ ->
             []
@@ -585,6 +586,7 @@ reportErrorsForLet letExpression namesFromLetDeclarations scopes declarations =
                             scopes
                             { name = Node.value functionName
                             , range = Node.range functionName
+                            , signatureRange = Maybe.map (\(Node _ signature) -> Node.range signature.name) function.signature
                             , origin = NotFromRecord
                             }
                     of
@@ -700,7 +702,7 @@ popScope ( head, tail ) =
 
 
 error : Node Expression -> Scope -> Scopes -> ScopeNames -> Maybe (Rule.Error {})
-error expressionToReplaceThingsIn namesOnTheSameLevel scopes { range, name, origin } =
+error expressionToReplaceThingsIn namesOnTheSameLevel scopes { range, name, signatureRange, origin } =
     let
         nameWithoutUnderscore : String
         nameWithoutUnderscore =
@@ -731,7 +733,7 @@ error expressionToReplaceThingsIn namesOnTheSameLevel scopes { range, name, orig
                     range
                     (case findUsages name nameWithoutUnderscore [ expressionToReplaceThingsIn ] [] of
                         Just usages ->
-                            List.map removeLastCharacter (range :: usages)
+                            List.map removeLastCharacter (addMaybe signatureRange (range :: usages))
 
                         Nothing ->
                             []
@@ -740,6 +742,16 @@ error expressionToReplaceThingsIn namesOnTheSameLevel scopes { range, name, orig
 
     else
         Nothing
+
+
+addMaybe : Maybe a -> List a -> List a
+addMaybe maybe list =
+    case maybe of
+        Just element ->
+            element :: list
+
+        Nothing ->
+            list
 
 
 findUsages : String -> String -> List (Node Expression) -> List Range -> Maybe (List Range)
