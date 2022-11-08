@@ -85,6 +85,7 @@ rule =
     Rule.newModuleRuleSchemaUsingContextCreator "NoSimpleLetBody" initContext
         |> Rule.withDeclarationListVisitor declarationListVisitor
         |> Rule.withExpressionEnterVisitor expressionVisitor
+        |> Rule.providesFixesForModuleRule
         |> Rule.fromModuleRuleSchema
 
 
