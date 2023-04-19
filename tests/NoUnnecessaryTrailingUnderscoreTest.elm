@@ -76,6 +76,19 @@ a_ = 1
                             , under = "a_"
                             }
                         ]
+        , test "should report an error when a top-level variable has a trailing _ (named infix)" <|
+            \() ->
+                """module A exposing (..)
+infix_ = 1
+"""
+                    |> Review.Test.run rule
+                    |> Review.Test.expectErrors
+                        [ Review.Test.error
+                            { message = messageForTopLevel
+                            , details = detailsForTopLevel
+                            , under = "infix_"
+                            }
+                        ]
         , test "should report an error when a top-level variable has a trailing _, even if it would clash" <|
             \() ->
                 """module A exposing (..)

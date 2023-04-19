@@ -446,9 +446,6 @@ reservedElmKeywords =
         , "exposing_"
         , "as_"
         , "port_"
-
-        -- Until `elm-format` and `elm-syntax` allow `infix` as an identifier
-        , "infix_"
         ]
 
 
