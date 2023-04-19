@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.1.4] - 2023-04-19
+
+[`NoUnnecessaryTrailingUnderscore`] now removes the underscore from variables named `infix_`. It didn't so before because of a bug in `elm-format`, now fixed in `elm-format@0.8.7`.
+
 ## [1.1.3] - 2022-11-08
 
 Add better support for `jfmengels/elm-review` v2.10.0.
