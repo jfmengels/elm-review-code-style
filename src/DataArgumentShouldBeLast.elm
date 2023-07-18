@@ -179,3 +179,17 @@ removeRange node =
 removeRangeFromRecordField : Node RecordField -> Node RecordField
 removeRangeFromRecordField (Node _ ( Node _ property, value )) =
     Node Range.emptyRange ( Node Range.emptyRange property, removeRange value )
+
+
+find : (a -> Bool) -> List a -> Maybe a
+find predicate list =
+    case list of
+        [] ->
+            Nothing
+
+        x :: xs ->
+            if predicate x then
+                Just x
+
+            else
+                find predicate xs
