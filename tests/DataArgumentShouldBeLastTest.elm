@@ -40,6 +40,15 @@ update model msg =
                             , under = "Model"
                             }
                         ]
+        , test "should not report an error when the return type is not in the arguments" <|
+            \() ->
+                """module A exposing (..)
+fn : OtherThing -> Msg -> Model
+fn otherThing msg =
+    {}
+"""
+                    |> Review.Test.run rule
+                    |> Review.Test.expectNoErrors
         , test "should not report an error when the data is there multiple times but also as the last argument" <|
             \() ->
                 """module A exposing (..)
