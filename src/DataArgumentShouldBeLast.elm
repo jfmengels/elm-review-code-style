@@ -7,7 +7,8 @@ module DataArgumentShouldBeLast exposing (rule)
 -}
 
 import Elm.Syntax.Declaration as Declaration exposing (Declaration)
-import Elm.Syntax.Node as Node exposing (Node)
+import Elm.Syntax.Node as Node exposing (Node(..))
+import Elm.Syntax.TypeAnnotation exposing (TypeAnnotation)
 import Review.Rule as Rule exposing (Rule)
 
 
@@ -104,18 +105,28 @@ declarationVisitor node context =
     case Node.value node of
         Declaration.FunctionDeclaration { signature, declaration } ->
             case signature of
-                Just type_ ->
-                    ( [ Rule.error
-                            { message = "REPLACEME"
-                            , details = [ "REPLACEME" ]
-                            }
-                            (Node.range node)
-                      ]
-                    , context
-                    )
+                Just (Node _ type_) ->
+                    case isNotDataLast type_.typeAnnotation of
+                        Just { dataPosition, returnType } ->
+                            ( [ Rule.error
+                                    { message = "REPLACEME"
+                                    , details = [ "REPLACEME" ]
+                                    }
+                                    (Node.range node)
+                              ]
+                            , context
+                            )
+
+                        Nothing ->
+                            ( [], context )
 
                 Nothing ->
                     ( [], context )
 
         _ ->
             ( [], context )
+
+
+isNotDataLast : Node TypeAnnotation -> Maybe b
+isNotDataLast type_ =
+    Nothing
