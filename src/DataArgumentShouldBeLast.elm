@@ -144,7 +144,7 @@ declarationVisitor node context =
         Declaration.FunctionDeclaration { signature, declaration } ->
             case signature of
                 Just (Node _ type_) ->
-                    case isNotDataLast type_.typeAnnotation of
+                    case isNotDataLast type_.typeAnnotation context.localTypes of
                         Just { argPosition, returnType } ->
                             ( [ Rule.error
                                     { message = "REPLACEME"
@@ -165,8 +165,8 @@ declarationVisitor node context =
             ( [], context )
 
 
-isNotDataLast : Node TypeAnnotation -> Maybe { argPosition : Range, returnType : TypeAnnotation }
-isNotDataLast type_ =
+isNotDataLast : Node TypeAnnotation -> Set String -> Maybe { argPosition : Range, returnType : TypeAnnotation }
+isNotDataLast type_ localTypes =
     let
         { returnType, arguments } =
             getReturnType type_ []
