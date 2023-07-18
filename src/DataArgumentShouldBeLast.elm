@@ -8,7 +8,7 @@ module DataArgumentShouldBeLast exposing (rule)
 
 import Elm.Syntax.Declaration as Declaration exposing (Declaration)
 import Elm.Syntax.Node as Node exposing (Node(..))
-import Elm.Syntax.TypeAnnotation exposing (TypeAnnotation)
+import Elm.Syntax.TypeAnnotation as TypeAnnotation exposing (TypeAnnotation)
 import Review.Rule as Rule exposing (Rule)
 
 
@@ -129,4 +129,19 @@ declarationVisitor node context =
 
 isNotDataLast : Node TypeAnnotation -> Maybe b
 isNotDataLast type_ =
+    let
+        returnType : Node TypeAnnotation
+        returnType =
+            getReturnType type_ []
+    in
     Nothing
+
+
+getReturnType : Node TypeAnnotation -> List (Node TypeAnnotation) -> Node TypeAnnotation
+getReturnType type_ argsAcc =
+    case Node.value type_ of
+        TypeAnnotation.FunctionTypeAnnotation arg return_ ->
+            getReturnType type_ (arg :: argsAcc)
+
+        _ ->
+            type_
