@@ -40,4 +40,13 @@ update model msg =
                             , under = "Model"
                             }
                         ]
+        , test "should not report an error when the data is there multiple times but also as the last argument" <|
+            \() ->
+                """module A exposing (..)
+add : a -> a -> a
+add a b =
+    a + b
+"""
+                    |> Review.Test.run rule
+                    |> Review.Test.expectNoErrors
         ]
