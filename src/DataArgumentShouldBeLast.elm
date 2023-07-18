@@ -12,7 +12,6 @@ import Elm.Syntax.Range as Range exposing (Range)
 import Elm.Syntax.TypeAnnotation as TypeAnnotation exposing (RecordField, TypeAnnotation)
 import Review.ModuleNameLookupTable as ModuleNameLookupTable exposing (ModuleNameLookupTable)
 import Review.Rule as Rule exposing (Rule)
-import Set exposing (Set)
 
 
 {-| Reports... REPLACEME
@@ -69,7 +68,6 @@ type alias ProjectContext =
 
 type alias ModuleContext =
     { lookupTable : ModuleNameLookupTable
-    , localTypes : Set String
     }
 
 
@@ -87,13 +85,11 @@ initialProjectContext =
 fromProjectToModule : Rule.ContextCreator ProjectContext ModuleContext
 fromProjectToModule =
     Rule.initContextCreator
-        (\lookupTable ast projectContext ->
+        (\lookupTable projectContext ->
             { lookupTable = lookupTable
-            , localTypes = getTypeNames ast.declarations Set.empty
             }
         )
         |> Rule.withModuleNameLookupTable
-        |> Rule.withFullAst
 
 
 fromModuleToProject : Rule.ContextCreator ModuleContext ProjectContext
@@ -107,34 +103,6 @@ fromModuleToProject =
 foldProjectContexts : ProjectContext -> ProjectContext -> ProjectContext
 foldProjectContexts new previous =
     {}
-
-
-getTypeNames : List (Node Declaration) -> Set String -> Set String
-getTypeNames nodes acc =
-    case nodes of
-        [] ->
-            acc
-
-        node :: rest ->
-            case getTypeName node of
-                Just name ->
-                    getTypeNames rest (Set.insert name acc)
-
-                Nothing ->
-                    getTypeNames rest acc
-
-
-getTypeName : Node Declaration -> Maybe String
-getTypeName node =
-    case Node.value node of
-        Declaration.CustomTypeDeclaration { name } ->
-            Just (Node.value name)
-
-        Declaration.AliasDeclaration { name } ->
-            Just (Node.value name)
-
-        _ ->
-            Nothing
 
 
 declarationVisitor : Node Declaration -> ModuleContext -> ( List (Rule.Error {}), ModuleContext )
