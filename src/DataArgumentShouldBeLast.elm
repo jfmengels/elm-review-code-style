@@ -11,6 +11,7 @@ import Elm.Syntax.Node as Node exposing (Node(..))
 import Elm.Syntax.Range as Range exposing (Range)
 import Elm.Syntax.TypeAnnotation as TypeAnnotation exposing (RecordField, TypeAnnotation)
 import Review.Rule as Rule exposing (Rule)
+import Set exposing (Set)
 
 
 {-| Reports... REPLACEME
@@ -66,7 +67,8 @@ type alias ProjectContext =
 
 
 type alias ModuleContext =
-    {}
+    { localTypes : Set String
+    }
 
 
 moduleVisitor : Rule.ModuleRuleSchema schema ModuleContext -> Rule.ModuleRuleSchema { schema | hasAtLeastOneVisitor : () } ModuleContext
@@ -84,7 +86,8 @@ fromProjectToModule : Rule.ContextCreator ProjectContext ModuleContext
 fromProjectToModule =
     Rule.initContextCreator
         (\projectContext ->
-            {}
+            { localTypes = Set.empty
+            }
         )
 
 
