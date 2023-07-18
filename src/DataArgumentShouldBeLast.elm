@@ -136,6 +136,8 @@ isNotDataLast type_ =
     Nothing
 
 
+{-| Returned arguments are in the opposite order.
+-}
 getReturnType : Node TypeAnnotation -> List TypeAnnotation -> { returnType : TypeAnnotation, arguments : List TypeAnnotation }
 getReturnType type_ argsAcc =
     case Node.value type_ of
