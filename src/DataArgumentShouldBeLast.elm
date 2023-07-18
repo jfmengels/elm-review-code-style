@@ -8,7 +8,8 @@ module DataArgumentShouldBeLast exposing (rule)
 
 import Elm.Syntax.Declaration as Declaration exposing (Declaration)
 import Elm.Syntax.Node as Node exposing (Node(..))
-import Elm.Syntax.TypeAnnotation as TypeAnnotation exposing (TypeAnnotation)
+import Elm.Syntax.Range as Range
+import Elm.Syntax.TypeAnnotation as TypeAnnotation exposing (RecordField, TypeAnnotation)
 import Review.Rule as Rule exposing (Rule)
 
 
@@ -142,9 +143,39 @@ getReturnType : Node TypeAnnotation -> List TypeAnnotation -> { returnType : Typ
 getReturnType type_ argsAcc =
     case Node.value type_ of
         TypeAnnotation.FunctionTypeAnnotation arg return_ ->
-            getReturnType return_ (Node.value arg :: argsAcc)
+            getReturnType return_ (Node.value (removeRange arg) :: argsAcc)
 
         _ ->
-            { returnType = Node.value type_
+            { returnType = Node.value (removeRange type_)
             , arguments = argsAcc
             }
+
+
+removeRange : Node TypeAnnotation -> Node TypeAnnotation
+removeRange node =
+    case Node.value node of
+        TypeAnnotation.GenericType string ->
+            Node Range.emptyRange (TypeAnnotation.GenericType string)
+
+        TypeAnnotation.Typed (Node _ qualifier) nodes ->
+            Node Range.emptyRange (TypeAnnotation.Typed (Node Range.emptyRange qualifier) (List.map removeRange nodes))
+
+        TypeAnnotation.Unit ->
+            node
+
+        TypeAnnotation.Tupled nodes ->
+            Node Range.emptyRange (TypeAnnotation.Tupled (List.map removeRange nodes))
+
+        TypeAnnotation.Record recordDefinition ->
+            Node Range.emptyRange (TypeAnnotation.Record (List.map removeRangeFromRecordField recordDefinition))
+
+        TypeAnnotation.GenericRecord (Node _ var) (Node _ recordDefinition) ->
+            Node Range.emptyRange (TypeAnnotation.GenericRecord (Node Range.emptyRange var) (Node Range.emptyRange (List.map removeRangeFromRecordField recordDefinition)))
+
+        TypeAnnotation.FunctionTypeAnnotation input output ->
+            Node Range.emptyRange (TypeAnnotation.FunctionTypeAnnotation (removeRange input) (removeRange output))
+
+
+removeRangeFromRecordField : Node RecordField -> Node RecordField
+removeRangeFromRecordField (Node _ ( Node _ property, value )) =
+    Node Range.emptyRange ( Node Range.emptyRange property, removeRange value )
