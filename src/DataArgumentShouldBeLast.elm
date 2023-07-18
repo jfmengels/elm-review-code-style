@@ -6,7 +6,7 @@ module DataArgumentShouldBeLast exposing (rule)
 
 -}
 
-import Elm.Syntax.Expression exposing (Expression)
+import Elm.Syntax.Declaration exposing (Declaration)
 import Elm.Syntax.Node as Node exposing (Node)
 import Review.Rule as Rule exposing (Rule)
 
@@ -70,7 +70,7 @@ type alias ModuleContext =
 moduleVisitor : Rule.ModuleRuleSchema schema ModuleContext -> Rule.ModuleRuleSchema { schema | hasAtLeastOneVisitor : () } ModuleContext
 moduleVisitor schema =
     schema
-        |> Rule.withExpressionEnterVisitor expressionVisitor
+        |> Rule.withDeclarationEnterVisitor declarationVisitor
 
 
 initialProjectContext : ProjectContext
@@ -99,8 +99,8 @@ foldProjectContexts new previous =
     {}
 
 
-expressionVisitor : Node Expression -> ProjectContext -> ( List (Rule.Error {}), ProjectContext )
-expressionVisitor node context =
+declarationVisitor : Node Declaration -> ProjectContext -> ( List (Rule.Error {}), ProjectContext )
+declarationVisitor node context =
     case Node.value node of
         _ ->
             ( [], context )
