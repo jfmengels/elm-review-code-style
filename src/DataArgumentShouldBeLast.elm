@@ -6,7 +6,7 @@ module DataArgumentShouldBeLast exposing (rule)
 
 -}
 
-import Elm.Syntax.Declaration exposing (Declaration)
+import Elm.Syntax.Declaration as Declaration exposing (Declaration)
 import Elm.Syntax.Node as Node exposing (Node)
 import Review.Rule as Rule exposing (Rule)
 
@@ -102,5 +102,13 @@ foldProjectContexts new previous =
 declarationVisitor : Node Declaration -> ProjectContext -> ( List (Rule.Error {}), ProjectContext )
 declarationVisitor node context =
     case Node.value node of
+        Declaration.FunctionDeclaration { signature, declaration } ->
+            case signature of
+                Just type_ ->
+                    ( [], context )
+
+                Nothing ->
+                    ( [], context )
+
         _ ->
             ( [], context )
