@@ -130,18 +130,19 @@ declarationVisitor node context =
 isNotDataLast : Node TypeAnnotation -> Maybe b
 isNotDataLast type_ =
     let
-        { returnType } =
+        { returnType, arguments } =
             getReturnType type_ []
     in
     Nothing
 
 
-getReturnType : Node TypeAnnotation -> List (Node TypeAnnotation) -> { returnType : TypeAnnotation }
+getReturnType : Node TypeAnnotation -> List TypeAnnotation -> { returnType : TypeAnnotation, arguments : List TypeAnnotation }
 getReturnType type_ argsAcc =
     case Node.value type_ of
         TypeAnnotation.FunctionTypeAnnotation arg return_ ->
-            getReturnType return_ (arg :: argsAcc)
+            getReturnType return_ (Node.value arg :: argsAcc)
 
         _ ->
             { returnType = Node.value type_
+            , arguments = argsAcc
             }
