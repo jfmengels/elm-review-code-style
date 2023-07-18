@@ -169,7 +169,7 @@ isNotDataLast : Node TypeAnnotation -> Set String -> Maybe { argPosition : Range
 isNotDataLast type_ localTypes =
     let
         { returnType, arguments } =
-            getReturnType type_ []
+            getArguments type_ []
     in
     case arguments of
         firstArg :: rest ->
@@ -193,11 +193,11 @@ isNotDataLast type_ localTypes =
 
 {-| Returned arguments are in the opposite order.
 -}
-getReturnType : Node TypeAnnotation -> List (Node TypeAnnotation) -> { returnType : TypeAnnotation, arguments : List (Node TypeAnnotation) }
-getReturnType type_ argsAcc =
+getArguments : Node TypeAnnotation -> List (Node TypeAnnotation) -> { returnType : TypeAnnotation, arguments : List (Node TypeAnnotation) }
+getArguments type_ argsAcc =
     case Node.value type_ of
         TypeAnnotation.FunctionTypeAnnotation arg return_ ->
-            getReturnType return_ ((Node (Node.range arg) <| Node.value <| removeRange arg) :: argsAcc)
+            getArguments return_ ((Node (Node.range arg) <| Node.value <| removeRange arg) :: argsAcc)
 
         _ ->
             { returnType = Node.value (removeRange type_)
