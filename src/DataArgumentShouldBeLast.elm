@@ -167,42 +167,44 @@ declarationVisitor node context =
 
 isNotDataLast : Node TypeAnnotation -> Set String -> Maybe { argPosition : Range, returnType : TypeAnnotation }
 isNotDataLast type_ localTypes =
-    let
-        { returnType, arguments } =
-            getArguments type_ []
-    in
-    case arguments of
-        firstArg :: rest ->
-            if Node.value firstArg == returnType then
-                Nothing
+    case getArguments type_ [] of
+        Nothing ->
+            Nothing
 
-            else
-                case find (\arg -> Node.value arg == returnType) rest of
-                    Just arg ->
-                        Just
-                            { argPosition = Node.range arg
-                            , returnType = returnType
-                            }
-
-                    Nothing ->
+        Just { returnType, arguments } ->
+            case arguments of
+                firstArg :: rest ->
+                    if Node.value firstArg == returnType then
                         Nothing
 
-        [] ->
-            Nothing
+                    else
+                        case find (\arg -> Node.value arg == returnType) rest of
+                            Just arg ->
+                                Just
+                                    { argPosition = Node.range arg
+                                    , returnType = returnType
+                                    }
+
+                            Nothing ->
+                                Nothing
+
+                [] ->
+                    Nothing
 
 
 {-| Returned arguments are in the opposite order.
 -}
-getArguments : Node TypeAnnotation -> List (Node TypeAnnotation) -> { returnType : TypeAnnotation, arguments : List (Node TypeAnnotation) }
+getArguments : Node TypeAnnotation -> List (Node TypeAnnotation) -> Maybe { returnType : TypeAnnotation, arguments : List (Node TypeAnnotation) }
 getArguments type_ argsAcc =
     case Node.value type_ of
         TypeAnnotation.FunctionTypeAnnotation arg return_ ->
             getArguments return_ ((Node (Node.range arg) <| Node.value <| removeRange arg) :: argsAcc)
 
         _ ->
-            { returnType = Node.value (removeRange type_)
-            , arguments = argsAcc
-            }
+            Just
+                { returnType = Node.value (removeRange type_)
+                , arguments = argsAcc
+                }
 
 
 removeRange : Node TypeAnnotation -> Node TypeAnnotation
