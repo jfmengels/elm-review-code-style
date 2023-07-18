@@ -101,7 +101,7 @@ foldProjectContexts new previous =
     {}
 
 
-declarationVisitor : Node Declaration -> ProjectContext -> ( List (Rule.Error {}), ProjectContext )
+declarationVisitor : Node Declaration -> ModuleContext -> ( List (Rule.Error {}), ModuleContext )
 declarationVisitor node context =
     case Node.value node of
         Declaration.FunctionDeclaration { signature, declaration } ->
