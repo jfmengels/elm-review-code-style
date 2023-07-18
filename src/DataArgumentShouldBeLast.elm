@@ -8,7 +8,7 @@ module DataArgumentShouldBeLast exposing (rule)
 
 import Elm.Syntax.Declaration as Declaration exposing (Declaration)
 import Elm.Syntax.Node as Node exposing (Node(..))
-import Elm.Syntax.Range as Range
+import Elm.Syntax.Range as Range exposing (Range)
 import Elm.Syntax.TypeAnnotation as TypeAnnotation exposing (RecordField, TypeAnnotation)
 import Review.Rule as Rule exposing (Rule)
 
@@ -128,13 +128,21 @@ declarationVisitor node context =
             ( [], context )
 
 
-isNotDataLast : Node TypeAnnotation -> Maybe b
+isNotDataLast : Node TypeAnnotation -> Maybe { dataPosition : Range, returnType : TypeAnnotation }
 isNotDataLast type_ =
     let
         { returnType, arguments } =
             getReturnType type_ []
     in
-    Nothing
+    case arguments of
+        firstArg :: rest ->
+            Just
+                { dataPosition = Node.range firstArg
+                , returnType = returnType
+                }
+
+        [] ->
+            Nothing
 
 
 {-| Returned arguments are in the opposite order.
