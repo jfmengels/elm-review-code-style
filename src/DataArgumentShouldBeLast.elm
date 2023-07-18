@@ -10,6 +10,7 @@ import Elm.Syntax.Declaration as Declaration exposing (Declaration)
 import Elm.Syntax.Node as Node exposing (Node(..))
 import Elm.Syntax.Range as Range exposing (Range)
 import Elm.Syntax.TypeAnnotation as TypeAnnotation exposing (RecordField, TypeAnnotation)
+import Review.ModuleNameLookupTable exposing (ModuleNameLookupTable)
 import Review.Rule as Rule exposing (Rule)
 import Set exposing (Set)
 
@@ -67,7 +68,8 @@ type alias ProjectContext =
 
 
 type alias ModuleContext =
-    { localTypes : Set String
+    { lookupTable : ModuleNameLookupTable
+    , localTypes : Set String
     }
 
 
@@ -85,10 +87,12 @@ initialProjectContext =
 fromProjectToModule : Rule.ContextCreator ProjectContext ModuleContext
 fromProjectToModule =
     Rule.initContextCreator
-        (\ast projectContext ->
-            { localTypes = getTypeNames ast.declarations Set.empty
+        (\lookupTable ast projectContext ->
+            { lookupTable = lookupTable
+            , localTypes = getTypeNames ast.declarations Set.empty
             }
         )
+        |> Rule.withModuleNameLookupTable
         |> Rule.withFullAst
 
 
