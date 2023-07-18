@@ -11,6 +11,8 @@ all =
         [ test "should not report an error when there is no type annotation" <|
             \() ->
                 """module A exposing (..)
+type Msg = Msg
+type Model = Model
 update model msg =
     model
 """
@@ -19,6 +21,8 @@ update model msg =
         , test "should not report an error when the data is last" <|
             \() ->
                 """module A exposing (..)
+type Msg = Msg
+type Model = Model
 update : Msg -> Model -> Model
 update msg model =
     model
@@ -28,6 +32,8 @@ update msg model =
         , test "should report an error when the return type is present in the arguments but not as the last one" <|
             \() ->
                 """module A exposing (..)
+type Msg = Msg
+type Model = Model
 update : Model -> Msg -> Model
 update model msg =
     model
@@ -39,11 +45,14 @@ update model msg =
                             , details = [ "REPLACEME" ]
                             , under = "Model"
                             }
-                            |> Review.Test.atExactly { start = { row = 2, column = 10 }, end = { row = 2, column = 15 } }
+                            |> Review.Test.atExactly { start = { row = 4, column = 10 }, end = { row = 4, column = 15 } }
                         ]
         , test "should not report an error when the return type is not in the arguments" <|
             \() ->
                 """module A exposing (..)
+type Msg = Msg
+type Model = Model
+type OtherThing = OtherThing
 fn : OtherThing -> Msg -> Model
 fn otherThing msg =
     {}
@@ -53,7 +62,9 @@ fn otherThing msg =
         , test "should not report an error when the data is there multiple times but also as the last argument" <|
             \() ->
                 """module A exposing (..)
-add : a -> a -> a
+type Msg = Msg
+type Model = Model
+add : Model -> Model -> Model
 add a b =
     a + b
 """
