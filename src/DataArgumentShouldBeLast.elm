@@ -105,7 +105,14 @@ declarationVisitor node context =
         Declaration.FunctionDeclaration { signature, declaration } ->
             case signature of
                 Just type_ ->
-                    ( [], context )
+                    ( [ Rule.error
+                            { message = "REPLACEME"
+                            , details = [ "REPLACEME" ]
+                            }
+                            (Node.range node)
+                      ]
+                    , context
+                    )
 
                 Nothing ->
                     ( [], context )
