@@ -140,10 +140,15 @@ isNotDataLast type_ =
                 Nothing
 
             else
-                Just
-                    { dataPosition = Node.range firstArg
-                    , returnType = returnType
-                    }
+                case find (\arg -> Node.value arg == returnType) rest of
+                    Just arg ->
+                        Just
+                            { dataPosition = Node.range arg
+                            , returnType = returnType
+                            }
+
+                    Nothing ->
+                        Nothing
 
         [] ->
             Nothing
