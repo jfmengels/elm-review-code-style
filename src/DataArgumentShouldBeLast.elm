@@ -200,11 +200,14 @@ getArguments type_ localTypes argsAcc =
         TypeAnnotation.FunctionTypeAnnotation arg return_ ->
             getArguments return_ localTypes ((Node (Node.range arg) <| Node.value <| removeRange arg) :: argsAcc)
 
-        _ ->
+        TypeAnnotation.Typed _ _ ->
             Just
                 { returnType = Node.value (removeRange type_)
                 , arguments = argsAcc
                 }
+
+        _ ->
+            Nothing
 
 
 removeRange : Node TypeAnnotation -> Node TypeAnnotation
