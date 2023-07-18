@@ -136,10 +136,14 @@ isNotDataLast type_ =
     in
     case arguments of
         firstArg :: rest ->
-            Just
-                { dataPosition = Node.range firstArg
-                , returnType = returnType
-                }
+            if Node.value firstArg == returnType then
+                Nothing
+
+            else
+                Just
+                    { dataPosition = Node.range firstArg
+                    , returnType = returnType
+                    }
 
         [] ->
             Nothing
