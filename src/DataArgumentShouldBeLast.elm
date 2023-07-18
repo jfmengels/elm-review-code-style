@@ -143,7 +143,7 @@ declarationVisitor node context =
         Declaration.FunctionDeclaration { signature, declaration } ->
             case signature of
                 Just (Node _ type_) ->
-                    case isNotDataLast type_.typeAnnotation context.localTypes of
+                    case isNotDataLast type_.typeAnnotation context.lookupTable of
                         Just { argPosition, returnType } ->
                             ( [ Rule.error
                                     { message = "REPLACEME"
@@ -164,9 +164,9 @@ declarationVisitor node context =
             ( [], context )
 
 
-isNotDataLast : Node TypeAnnotation -> Set String -> Maybe { argPosition : Range, returnType : TypeAnnotation }
-isNotDataLast type_ localTypes =
-    case getArguments type_ localTypes [] of
+isNotDataLast : Node TypeAnnotation -> ModuleNameLookupTable -> Maybe { argPosition : Range, returnType : TypeAnnotation }
+isNotDataLast type_ lookupTable =
+    case getArguments type_ lookupTable [] of
         Nothing ->
             Nothing
 
@@ -193,11 +193,11 @@ isNotDataLast type_ localTypes =
 
 {-| Returned arguments are in the opposite order.
 -}
-getArguments : Node TypeAnnotation -> Set String -> List (Node TypeAnnotation) -> Maybe { returnType : TypeAnnotation, arguments : List (Node TypeAnnotation) }
-getArguments type_ localTypes argsAcc =
+getArguments : Node TypeAnnotation -> ModuleNameLookupTable -> List (Node TypeAnnotation) -> Maybe { returnType : TypeAnnotation, arguments : List (Node TypeAnnotation) }
+getArguments type_ lookupTable argsAcc =
     case Node.value type_ of
         TypeAnnotation.FunctionTypeAnnotation arg return_ ->
-            getArguments return_ localTypes ((Node (Node.range arg) <| Node.value <| removeRange arg) :: argsAcc)
+            getArguments return_ lookupTable ((Node (Node.range arg) <| Node.value <| removeRange arg) :: argsAcc)
 
         TypeAnnotation.Typed _ _ ->
             Just
