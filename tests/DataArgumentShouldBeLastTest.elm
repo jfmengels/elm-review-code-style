@@ -25,7 +25,7 @@ update msg model =
 """
                     |> Review.Test.run rule
                     |> Review.Test.expectNoErrors
-        , test "should report an error when the data is not last" <|
+        , test "should report an error when the return type is present in the arguments but not as the last one" <|
             \() ->
                 """module A exposing (..)
 update : Model -> Msg -> Model
