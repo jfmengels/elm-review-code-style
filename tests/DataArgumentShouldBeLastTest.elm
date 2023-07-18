@@ -39,6 +39,7 @@ update model msg =
                             , details = [ "REPLACEME" ]
                             , under = "Model"
                             }
+                            |> Review.Test.atExactly { start = { row = 2, column = 10 }, end = { row = 2, column = 15 } }
                         ]
         , test "should not report an error when the return type is not in the arguments" <|
             \() ->

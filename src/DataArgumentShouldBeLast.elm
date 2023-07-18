@@ -108,12 +108,12 @@ declarationVisitor node context =
             case signature of
                 Just (Node _ type_) ->
                     case isNotDataLast type_.typeAnnotation of
-                        Just { dataPosition, returnType } ->
+                        Just { argPosition, returnType } ->
                             ( [ Rule.error
                                     { message = "REPLACEME"
                                     , details = [ "REPLACEME" ]
                                     }
-                                    (Node.range node)
+                                    argPosition
                               ]
                             , context
                             )
@@ -128,7 +128,7 @@ declarationVisitor node context =
             ( [], context )
 
 
-isNotDataLast : Node TypeAnnotation -> Maybe { dataPosition : Range, returnType : TypeAnnotation }
+isNotDataLast : Node TypeAnnotation -> Maybe { argPosition : Range, returnType : TypeAnnotation }
 isNotDataLast type_ =
     let
         { returnType, arguments } =
@@ -143,7 +143,7 @@ isNotDataLast type_ =
                 case find (\arg -> Node.value arg == returnType) rest of
                     Just arg ->
                         Just
-                            { dataPosition = Node.range arg
+                            { argPosition = Node.range arg
                             , returnType = returnType
                             }
 
@@ -160,7 +160,7 @@ getReturnType : Node TypeAnnotation -> List (Node TypeAnnotation) -> { returnTyp
 getReturnType type_ argsAcc =
     case Node.value type_ of
         TypeAnnotation.FunctionTypeAnnotation arg return_ ->
-            getReturnType return_ (removeRange arg :: argsAcc)
+            getReturnType return_ ((Node (Node.range arg) <| Node.value <| removeRange arg) :: argsAcc)
 
         _ ->
             { returnType = Node.value (removeRange type_)
