@@ -8,24 +8,27 @@ import Test exposing (Test, describe, test)
 all : Test
 all =
     describe "DataArgumentShouldBeLast"
-        [ test "should not report an error when REPLACEME" <|
+        [ test "should not report an error when there is no type annotation" <|
             \() ->
                 """module A exposing (..)
-a = 1
+update model msg =
+    model
 """
                     |> Review.Test.run rule
                     |> Review.Test.expectNoErrors
-        , test "should report an error when REPLACEME" <|
+        , test "should report an error when the data is not last" <|
             \() ->
                 """module A exposing (..)
-a = 1
+update : Model -> Msg -> Model
+update model msg =
+    model
 """
                     |> Review.Test.run rule
                     |> Review.Test.expectErrors
                         [ Review.Test.error
                             { message = "REPLACEME"
                             , details = [ "REPLACEME" ]
-                            , under = "REPLACEME"
+                            , under = "Model"
                             }
                         ]
         ]
