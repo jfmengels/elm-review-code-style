@@ -167,7 +167,7 @@ declarationVisitor node context =
 
 isNotDataLast : Node TypeAnnotation -> Set String -> Maybe { argPosition : Range, returnType : TypeAnnotation }
 isNotDataLast type_ localTypes =
-    case getArguments type_ [] of
+    case getArguments type_ localTypes [] of
         Nothing ->
             Nothing
 
@@ -194,11 +194,11 @@ isNotDataLast type_ localTypes =
 
 {-| Returned arguments are in the opposite order.
 -}
-getArguments : Node TypeAnnotation -> List (Node TypeAnnotation) -> Maybe { returnType : TypeAnnotation, arguments : List (Node TypeAnnotation) }
-getArguments type_ argsAcc =
+getArguments : Node TypeAnnotation -> Set String -> List (Node TypeAnnotation) -> Maybe { returnType : TypeAnnotation, arguments : List (Node TypeAnnotation) }
+getArguments type_ localTypes argsAcc =
     case Node.value type_ of
         TypeAnnotation.FunctionTypeAnnotation arg return_ ->
-            getArguments return_ ((Node (Node.range arg) <| Node.value <| removeRange arg) :: argsAcc)
+            getArguments return_ localTypes ((Node (Node.range arg) <| Node.value <| removeRange arg) :: argsAcc)
 
         _ ->
             Just
