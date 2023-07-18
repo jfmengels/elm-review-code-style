@@ -10,7 +10,7 @@ import Elm.Syntax.Declaration as Declaration exposing (Declaration)
 import Elm.Syntax.Node as Node exposing (Node(..))
 import Elm.Syntax.Range as Range exposing (Range)
 import Elm.Syntax.TypeAnnotation as TypeAnnotation exposing (RecordField, TypeAnnotation)
-import Review.ModuleNameLookupTable exposing (ModuleNameLookupTable)
+import Review.ModuleNameLookupTable as ModuleNameLookupTable exposing (ModuleNameLookupTable)
 import Review.Rule as Rule exposing (Rule)
 import Set exposing (Set)
 
@@ -200,10 +200,15 @@ getArguments type_ lookupTable argsAcc =
             getArguments return_ lookupTable ((Node (Node.range arg) <| Node.value <| removeRange arg) :: argsAcc)
 
         TypeAnnotation.Typed _ _ ->
-            Just
-                { returnType = Node.value (removeRange type_)
-                , arguments = argsAcc
-                }
+            case ModuleNameLookupTable.moduleNameFor lookupTable type_ of
+                Just [] ->
+                    Just
+                        { returnType = Node.value (removeRange type_)
+                        , arguments = argsAcc
+                        }
+
+                _ ->
+                    Nothing
 
         _ ->
             Nothing
