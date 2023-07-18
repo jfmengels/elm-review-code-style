@@ -11,6 +11,7 @@ when inside the directory containing this file.
 
 -}
 
+import DataArgumentShouldBeLast
 import NoSimpleLetBody
 import NoUnnecessaryTrailingUnderscore
 import Review.Rule exposing (Rule)
@@ -19,5 +20,6 @@ import Review.Rule exposing (Rule)
 config : List Rule
 config =
     [ NoUnnecessaryTrailingUnderscore.rule
+    , DataArgumentShouldBeLast.rule
     , NoSimpleLetBody.rule
     ]
