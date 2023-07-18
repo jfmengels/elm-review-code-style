@@ -16,6 +16,15 @@ update model msg =
 """
                     |> Review.Test.run rule
                     |> Review.Test.expectNoErrors
+        , test "should not report an error when the data is last" <|
+            \() ->
+                """module A exposing (..)
+update : Msg -> Model -> Model
+update msg model =
+    model
+"""
+                    |> Review.Test.run rule
+                    |> Review.Test.expectNoErrors
         , test "should report an error when the data is not last" <|
             \() ->
                 """module A exposing (..)
