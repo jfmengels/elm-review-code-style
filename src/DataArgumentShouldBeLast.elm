@@ -139,11 +139,11 @@ isNotDataLast type_ =
 
 {-| Returned arguments are in the opposite order.
 -}
-getReturnType : Node TypeAnnotation -> List TypeAnnotation -> { returnType : TypeAnnotation, arguments : List TypeAnnotation }
+getReturnType : Node TypeAnnotation -> List (Node TypeAnnotation) -> { returnType : TypeAnnotation, arguments : List (Node TypeAnnotation) }
 getReturnType type_ argsAcc =
     case Node.value type_ of
         TypeAnnotation.FunctionTypeAnnotation arg return_ ->
-            getReturnType return_ (Node.value (removeRange arg) :: argsAcc)
+            getReturnType return_ (removeRange arg :: argsAcc)
 
         _ ->
             { returnType = Node.value (removeRange type_)
