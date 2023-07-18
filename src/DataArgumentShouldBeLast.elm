@@ -105,11 +105,6 @@ foldProjectContexts new previous =
     {}
 
 
-declarationListVisitor : List (Node Declaration) -> ModuleContext -> ( List (Rule.Error {}), ModuleContext )
-declarationListVisitor nodes context =
-    ( [], { localTypes = Set.empty } )
-
-
 getTypeNames : List (Node Declaration) -> Set String -> Set String
 getTypeNames nodes acc =
     case nodes of
