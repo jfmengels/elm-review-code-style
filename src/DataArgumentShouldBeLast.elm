@@ -158,7 +158,7 @@ declarationVisitor node context =
                 Just (Node _ type_) ->
                     case isNotDataLast type_.typeAnnotation context.lookupTable of
                         Just { argPosition, returnType } ->
-                            ( [ Rule.error
+                            ( [ Rule.errorWithFix
                                     { message = "The data argument should be last"
                                     , details =
                                         [ "In Elm, it is common in functions that return the same type as one of the arguments to have that argument be the last. This makes it for instance easy to compose operations using `|>` or `>>`."
@@ -166,6 +166,7 @@ declarationVisitor node context =
                                         ]
                                     }
                                     argPosition
+                                    []
                               ]
                             , context
                             )
