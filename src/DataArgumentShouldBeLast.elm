@@ -10,6 +10,7 @@ import Elm.Syntax.Declaration as Declaration exposing (Declaration)
 import Elm.Syntax.Node as Node exposing (Node(..))
 import Elm.Syntax.Range as Range exposing (Range)
 import Elm.Syntax.TypeAnnotation as TypeAnnotation exposing (RecordField, TypeAnnotation)
+import Review.Fix as Fix
 import Review.ModuleNameLookupTable as ModuleNameLookupTable exposing (ModuleNameLookupTable)
 import Review.Rule as Rule exposing (Rule)
 
@@ -101,6 +102,7 @@ rule =
             }
         -- Enable this if modules need to get information from other modules
         -- |> Rule.withContextFromImportedModules
+        |> Rule.providesFixesForProjectRule
         |> Rule.fromProjectRuleSchema
 
 
@@ -166,7 +168,11 @@ declarationVisitor node context =
                                         ]
                                     }
                                     argPosition
-                                    []
+                                    [ Fix.removeRange { start = { row = 4, column = 10 }, end = { row = 4, column = 19 } }
+                                    , Fix.insertAt { row = 4, column = 25 } " Model ->"
+                                    , Fix.removeRange { start = { row = 5, column = 8 }, end = { row = 5, column = 14 } }
+                                    , Fix.insertAt { row = 5, column = 18 } "model "
+                                    ]
                               ]
                             , context
                             )
