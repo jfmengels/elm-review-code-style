@@ -160,7 +160,7 @@ declarationVisitor node context =
             case signature of
                 Just (Node _ type_) ->
                     case isNotDataLast type_.typeAnnotation context.lookupTable of
-                        Just { argPosition, argIndex, nextArgumentRange, returnType } ->
+                        Just { argPosition, argIndex, nextArgumentRange, nbOfArguments, returnType } ->
                             ( [ Rule.errorWithFix
                                     { message = "The data argument should be last"
                                     , details =
@@ -169,7 +169,7 @@ declarationVisitor node context =
                                         ]
                                     }
                                     argPosition
-                                    (createFix context argPosition argIndex nextArgumentRange returnType (Node.value declaration).arguments)
+                                    (createFix context nbOfArguments argPosition argIndex nextArgumentRange returnType (Node.value declaration).arguments)
                               ]
                             , context
                             )
@@ -184,9 +184,9 @@ declarationVisitor node context =
             ( [], context )
 
 
-createFix : ModuleContext -> Range -> Int -> Range -> Node d -> List (Node Pattern) -> List Fix
-createFix context argPosition argIndex nextArgumentRange returnType arguments =
-    case listAtIndex argIndex arguments of
+createFix : ModuleContext -> Int -> Range -> Int -> Range -> Node d -> List (Node Pattern) -> List Fix
+createFix context nbOfArguments argPosition argIndex nextArgumentRange returnType arguments =
+    case listAtIndex nbOfArguments argIndex arguments of
         Just arg ->
             List.concat
                 [ moveCode context
@@ -210,7 +210,7 @@ moveCode context { from, to } =
     ]
 
 
-isNotDataLast : Node TypeAnnotation -> ModuleNameLookupTable -> Maybe { argPosition : Range, argIndex : Int, nextArgumentRange : Range, returnType : Node TypeAnnotation }
+isNotDataLast : Node TypeAnnotation -> ModuleNameLookupTable -> Maybe { argPosition : Range, argIndex : Int, nextArgumentRange : Range, nbOfArguments : Int, returnType : Node TypeAnnotation }
 isNotDataLast type_ lookupTable =
     case getArguments type_ lookupTable [] of
         Nothing ->
@@ -229,6 +229,7 @@ isNotDataLast type_ lookupTable =
                                     { argPosition = Node.range arg
                                     , argIndex = argIndex
                                     , nextArgumentRange = Node.range nextElement
+                                    , nbOfArguments = List.length rest + 1
                                     , returnType = returnType
                                     }
 
@@ -306,8 +307,8 @@ findAndGiveElementAndItsPrevious predicate index previous list =
                 findAndGiveElementAndItsPrevious predicate (index + 1) x xs
 
 
-listAtIndex : Int -> List (Node a) -> Maybe Range
-listAtIndex index list =
+listAtIndex : Int -> Int -> List (Node a) -> Maybe Range
+listAtIndex nbOfArguments index list =
     case list of
         [] ->
             Nothing
@@ -324,4 +325,4 @@ listAtIndex index list =
                         Nothing
 
             else
-                listAtIndex (index - 1) xs
+                listAtIndex nbOfArguments (index - 1) xs
