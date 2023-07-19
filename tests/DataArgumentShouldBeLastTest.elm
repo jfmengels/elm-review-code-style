@@ -73,7 +73,7 @@ add a b =
 """
                     |> Review.Test.run rule
                     |> Review.Test.expectNoErrors
-        , test "should report an error when the return type is in arguments but not last, but the type is not defined in the same file" <|
+        , test "should not report an error when the return type is in arguments but not last, but the type is not defined in the same file" <|
             \() ->
                 """module A exposing (..)
 import Model exposing (Model)
