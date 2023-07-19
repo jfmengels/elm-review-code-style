@@ -198,7 +198,7 @@ declarationVisitor node context =
 
 finalEvaluation : ModuleContext -> List (Rule.Error {})
 finalEvaluation moduleContext =
-    []
+    moduleContext.errors
 
 
 createFix : ModuleContext -> Int -> Range -> Int -> Range -> Node d -> Location -> List (Node Pattern) -> List Fix
