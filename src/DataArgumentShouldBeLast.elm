@@ -159,7 +159,7 @@ declarationVisitor node context =
             case signature of
                 Just (Node _ type_) ->
                     case isNotDataLast type_.typeAnnotation context.lookupTable of
-                        Just { argPosition, returnType } ->
+                        Just { argPosition, nextArgumentRange, returnType } ->
                             ( [ Rule.errorWithFix
                                     { message = "The data argument should be last"
                                     , details =
@@ -187,7 +187,7 @@ declarationVisitor node context =
             ( [], context )
 
 
-isNotDataLast : Node TypeAnnotation -> ModuleNameLookupTable -> Maybe { argPosition : Range, returnType : Node TypeAnnotation }
+isNotDataLast : Node TypeAnnotation -> ModuleNameLookupTable -> Maybe { argPosition : Range, nextArgumentRange : Range, returnType : Node TypeAnnotation }
 isNotDataLast type_ lookupTable =
     case getArguments type_ lookupTable [] of
         Nothing ->
@@ -204,6 +204,7 @@ isNotDataLast type_ lookupTable =
                             Just ( arg, nextElement ) ->
                                 Just
                                     { argPosition = Node.range arg
+                                    , nextArgumentRange = Node.range nextElement
                                     , returnType = returnType
                                     }
 
