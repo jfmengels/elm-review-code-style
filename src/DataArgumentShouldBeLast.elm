@@ -210,11 +210,11 @@ isNotDataLast type_ lookupTable =
                         Nothing
 
                     else
-                        case findAndGiveElementAndItsPrevious (\arg -> Node.value arg == Node.value returnType) firstArg rest of
-                            Just ( arg, nextElement ) ->
+                        case findAndGiveElementAndItsPrevious (\arg -> Node.value arg == Node.value returnType) 0 firstArg rest of
+                            Just ( arg, argIndex, nextElement ) ->
                                 Just
                                     { argPosition = Node.range arg
-                                    , argIndex = 0
+                                    , argIndex = argIndex
                                     , nextArgumentRange = Node.range nextElement
                                     , returnType = returnType
                                     }
@@ -279,15 +279,15 @@ removeRangeFromRecordField (Node _ ( Node _ property, value )) =
     Node Range.emptyRange ( Node Range.emptyRange property, removeRange value )
 
 
-findAndGiveElementAndItsPrevious : (a -> Bool) -> a -> List a -> Maybe ( a, a )
-findAndGiveElementAndItsPrevious predicate previous list =
+findAndGiveElementAndItsPrevious : (a -> Bool) -> Int -> a -> List a -> Maybe ( a, Int, a )
+findAndGiveElementAndItsPrevious predicate index previous list =
     case list of
         [] ->
             Nothing
 
         x :: xs ->
             if predicate x then
-                Just ( x, previous )
+                Just ( x, index, previous )
 
             else
-                findAndGiveElementAndItsPrevious predicate x xs
+                findAndGiveElementAndItsPrevious predicate (index + 1) x xs
