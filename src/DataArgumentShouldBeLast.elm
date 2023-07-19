@@ -186,16 +186,21 @@ declarationVisitor node context =
 
 createFix : ModuleContext -> Range -> Int -> Range -> Node d -> List (Node Pattern) -> List Fix
 createFix context argPosition argIndex nextArgumentRange returnType arguments =
-    let
-        argTypeRange : Range
-        argTypeRange =
-            { start = argPosition.start, end = nextArgumentRange.start }
-    in
-    [ Fix.removeRange argTypeRange
-    , Fix.insertAt (Node.range returnType).start (context.extractSourceCode argTypeRange)
-    , Fix.removeRange { start = { row = 5, column = 8 }, end = { row = 5, column = 14 } }
-    , Fix.insertAt { row = 5, column = 18 } "model "
-    ]
+    case listAtIndex argIndex arguments of
+        Just arg ->
+            let
+                argTypeRange : Range
+                argTypeRange =
+                    { start = argPosition.start, end = nextArgumentRange.start }
+            in
+            [ Fix.removeRange argTypeRange
+            , Fix.insertAt (Node.range returnType).start (context.extractSourceCode argTypeRange)
+            , Fix.removeRange { start = { row = 5, column = 8 }, end = { row = 5, column = 14 } }
+            , Fix.insertAt { row = 5, column = 18 } "model "
+            ]
+
+        Nothing ->
+            []
 
 
 isNotDataLast : Node TypeAnnotation -> ModuleNameLookupTable -> Maybe { argPosition : Range, argIndex : Int, nextArgumentRange : Range, returnType : Node TypeAnnotation }
@@ -292,3 +297,17 @@ findAndGiveElementAndItsPrevious predicate index previous list =
 
             else
                 findAndGiveElementAndItsPrevious predicate (index + 1) x xs
+
+
+listAtIndex : Int -> List a -> Maybe a
+listAtIndex index list =
+    case list of
+        [] ->
+            Nothing
+
+        x :: xs ->
+            if index == 0 then
+                Just x
+
+            else
+                listAtIndex (index - 1) xs
