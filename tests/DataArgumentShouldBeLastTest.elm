@@ -124,6 +124,30 @@ value2 =
         msg
 """
                         ]
+        , test "should not expect a fix if not all arguments in the declaration" <|
+            \() ->
+                """module A exposing (..)
+type Msg = Msg
+type Model = Model
+update :
+    Model
+    -> Msg
+    -> Model
+update model =
+    fn
+"""
+                    |> Review.Test.run rule
+                    |> Review.Test.expectErrors
+                        [ Review.Test.error
+                            { message = "The data argument should be last"
+                            , details =
+                                [ "In Elm, it is common in functions that return the same type as one of the arguments to have that argument be the last. This makes it for instance easy to compose operations using `|>` or `>>`."
+                                , "Example: instead of `update : Model -> Msg -> Model`, it is more idiomatic to have `update : Msg -> Model -> Model`"
+                                ]
+                            , under = "Model"
+                            }
+                            |> Review.Test.atExactly { start = { row = 5, column = 5 }, end = { row = 5, column = 10 } }
+                        ]
         , test "should not report an error when the return type is not in the arguments" <|
             \() ->
                 """module A exposing (..)
