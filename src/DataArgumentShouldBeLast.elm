@@ -119,7 +119,9 @@ type alias ModuleContext =
 
 
 type alias PendingError =
-    Rule.Error {}
+    { range : Range
+    , fixes : List Fix
+    }
 
 
 moduleVisitor : Rule.ModuleRuleSchema schema ModuleContext -> Rule.ModuleRuleSchema { schema | hasAtLeastOneVisitor : () } ModuleContext
@@ -171,15 +173,9 @@ declarationVisitor node context =
                             ( []
                             , { context
                                 | errors =
-                                    Rule.errorWithFix
-                                        { message = "The data argument should be last"
-                                        , details =
-                                            [ "In Elm, it is common in functions that return the same type as one of the arguments to have that argument be the last. This makes it for instance easy to compose operations using `|>` or `>>`."
-                                            , "Example: instead of `update : Model -> Msg -> Model`, it is more idiomatic to have `update : Msg -> Model -> Model`"
-                                            ]
-                                        }
-                                        argPosition
-                                        (createFix
+                                    { range = argPosition
+                                    , fixes =
+                                        createFix
                                             context
                                             nbOfArguments
                                             argPosition
@@ -188,7 +184,7 @@ declarationVisitor node context =
                                             returnType
                                             (Node.range (Node.value declaration).name).end
                                             (Node.value declaration).arguments
-                                        )
+                                    }
                                         :: context.errors
                               }
                             )
@@ -205,7 +201,19 @@ declarationVisitor node context =
 
 finalEvaluation : ModuleContext -> List (Rule.Error {})
 finalEvaluation moduleContext =
-    moduleContext.errors
+    List.map
+        (\{ range, fixes } ->
+            Rule.errorWithFix
+                { message = "The data argument should be last"
+                , details =
+                    [ "In Elm, it is common in functions that return the same type as one of the arguments to have that argument be the last. This makes it for instance easy to compose operations using `|>` or `>>`."
+                    , "Example: instead of `update : Model -> Msg -> Model`, it is more idiomatic to have `update : Msg -> Model -> Model`"
+                    ]
+                }
+                range
+                fixes
+        )
+        moduleContext.errors
 
 
 createFix : ModuleContext -> Int -> Range -> Int -> Range -> Node d -> Location -> List (Node Pattern) -> List Fix
