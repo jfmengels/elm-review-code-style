@@ -110,6 +110,7 @@ type alias ProjectContext =
 
 type alias ModuleContext =
     { lookupTable : ModuleNameLookupTable
+    , extractSourceCode : Range -> String
     }
 
 
@@ -127,11 +128,13 @@ initialProjectContext =
 fromProjectToModule : Rule.ContextCreator ProjectContext ModuleContext
 fromProjectToModule =
     Rule.initContextCreator
-        (\lookupTable projectContext ->
+        (\lookupTable extractSourceCode projectContext ->
             { lookupTable = lookupTable
+            , extractSourceCode = extractSourceCode
             }
         )
         |> Rule.withModuleNameLookupTable
+        |> Rule.withSourceCodeExtractor
 
 
 fromModuleToProject : Rule.ContextCreator ModuleContext ProjectContext
