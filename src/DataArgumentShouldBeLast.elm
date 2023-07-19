@@ -306,7 +306,7 @@ findAndGiveElementAndItsPrevious predicate index previous list =
                 findAndGiveElementAndItsPrevious predicate (index + 1) x xs
 
 
-listAtIndex : Int -> List a -> Maybe a
+listAtIndex : Int -> List (Node a) -> Maybe Range
 listAtIndex index list =
     case list of
         [] ->
@@ -314,7 +314,14 @@ listAtIndex index list =
 
         x :: xs ->
             if index == 0 then
-                Just x
+                case List.head xs of
+                    Just next ->
+                        Just { start = (Node.range x).start, end = (Node.range next).start }
+
+                    Nothing ->
+                        -- If there is no next element, then not all arguments are declared
+                        -- and we should avoid providing a fix.
+                        Nothing
 
             else
                 listAtIndex (index - 1) xs
