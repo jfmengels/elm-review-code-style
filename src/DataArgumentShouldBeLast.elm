@@ -159,7 +159,7 @@ declarationVisitor node context =
             case signature of
                 Just (Node _ type_) ->
                     case isNotDataLast type_.typeAnnotation context.lookupTable of
-                        Just { argPosition, nextArgumentRange, returnType } ->
+                        Just { argPosition, argIndex, nextArgumentRange, returnType } ->
                             ( [ Rule.errorWithFix
                                     { message = "The data argument should be last"
                                     , details =
@@ -168,7 +168,7 @@ declarationVisitor node context =
                                         ]
                                     }
                                     argPosition
-                                    (createFix context argPosition nextArgumentRange returnType)
+                                    (createFix context argPosition argIndex nextArgumentRange returnType)
                               ]
                             , context
                             )
@@ -183,8 +183,8 @@ declarationVisitor node context =
             ( [], context )
 
 
-createFix : ModuleContext -> Range -> Range -> Node d -> List Fix
-createFix context argPosition nextArgumentRange returnType =
+createFix : ModuleContext -> Range -> Int -> Range -> Node d -> List Fix
+createFix context argPosition argIndex nextArgumentRange returnType =
     let
         argTypeRange : Range
         argTypeRange =
@@ -197,7 +197,7 @@ createFix context argPosition nextArgumentRange returnType =
     ]
 
 
-isNotDataLast : Node TypeAnnotation -> ModuleNameLookupTable -> Maybe { argPosition : Range, nextArgumentRange : Range, returnType : Node TypeAnnotation }
+isNotDataLast : Node TypeAnnotation -> ModuleNameLookupTable -> Maybe { argPosition : Range, argIndex : Int, nextArgumentRange : Range, returnType : Node TypeAnnotation }
 isNotDataLast type_ lookupTable =
     case getArguments type_ lookupTable [] of
         Nothing ->
@@ -214,6 +214,7 @@ isNotDataLast type_ lookupTable =
                             Just ( arg, nextElement ) ->
                                 Just
                                     { argPosition = Node.range arg
+                                    , argIndex = 0
                                     , nextArgumentRange = Node.range nextElement
                                     , returnType = returnType
                                     }
