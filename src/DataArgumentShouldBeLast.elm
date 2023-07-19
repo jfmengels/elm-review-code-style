@@ -160,6 +160,11 @@ declarationVisitor node context =
                 Just (Node _ type_) ->
                     case isNotDataLast type_.typeAnnotation context.lookupTable of
                         Just { argPosition, nextArgumentRange, returnType } ->
+                            let
+                                argTypeRange : Range
+                                argTypeRange =
+                                    { start = argPosition.start, end = nextArgumentRange.start }
+                            in
                             ( [ Rule.errorWithFix
                                     { message = "The data argument should be last"
                                     , details =
@@ -168,7 +173,7 @@ declarationVisitor node context =
                                         ]
                                     }
                                     argPosition
-                                    [ Fix.removeRange { start = argPosition.start, end = nextArgumentRange.start }
+                                    [ Fix.removeRange argTypeRange
                                     , Fix.insertAt { row = 4, column = 25 } " Model ->"
                                     , Fix.removeRange { start = { row = 5, column = 8 }, end = { row = 5, column = 14 } }
                                     , Fix.insertAt { row = 5, column = 18 } "model "
