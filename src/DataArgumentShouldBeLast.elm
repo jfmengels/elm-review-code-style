@@ -186,8 +186,8 @@ declarationVisitor node context =
 
 createFix : ModuleContext -> Int -> Range -> Int -> Range -> Node d -> List (Node Pattern) -> List Fix
 createFix context nbOfArguments argPosition argIndex nextArgumentRange returnType arguments =
-    case listAtIndex argIndex arguments of
-        Just { rangeToMove } ->
+    case Maybe.map2 Tuple.pair (listAtIndex argIndex arguments) (getLastArgAt nbOfArguments arguments) of
+        Just ( { rangeToMove }, lastArgPosition ) ->
             List.concat
                 [ moveCode context
                     { from = { start = argPosition.start, end = nextArgumentRange.start }
@@ -328,3 +328,13 @@ listAtIndex index list =
 
             else
                 listAtIndex (index - 1) xs
+
+
+getLastArgAt : Int -> List (Node a) -> Maybe Range
+getLastArgAt nbOfArguments arguments =
+    case List.drop (nbOfArguments - 1) arguments of
+        x :: [] ->
+            Just (Node.range x)
+
+        _ ->
+            Nothing
