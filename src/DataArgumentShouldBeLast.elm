@@ -114,8 +114,12 @@ type alias ProjectContext =
 type alias ModuleContext =
     { lookupTable : ModuleNameLookupTable
     , extractSourceCode : Range -> String
-    , errors : List (Rule.Error {})
+    , errors : List PendingError
     }
+
+
+type alias PendingError =
+    Rule.Error {}
 
 
 moduleVisitor : Rule.ModuleRuleSchema schema ModuleContext -> Rule.ModuleRuleSchema { schema | hasAtLeastOneVisitor : () } ModuleContext
