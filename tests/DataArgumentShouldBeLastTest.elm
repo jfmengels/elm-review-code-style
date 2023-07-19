@@ -29,6 +29,17 @@ update msg model =
 """
                     |> Review.Test.run rule
                     |> Review.Test.expectNoErrors
+        , test "should not report an error when the data is last and also present as a different argument" <|
+            \() ->
+                """module A exposing (..)
+type Msg = Msg
+type Model = Model
+update : Msg -> Model -> Model -> Model
+update msg model1 model2 =
+    model2
+"""
+                    |> Review.Test.run rule
+                    |> Review.Test.expectNoErrors
         , test "should report an error when the return type is present in the arguments but not as the last one" <|
             \() ->
                 """module A exposing (..)
