@@ -7,6 +7,8 @@ module DataArgumentShouldBeLast exposing (rule)
 -}
 
 import Elm.Syntax.Declaration as Declaration exposing (Declaration)
+import Elm.Syntax.Exposing as Exposing exposing (Exposing)
+import Elm.Syntax.Module as Module
 import Elm.Syntax.Node as Node exposing (Node(..))
 import Elm.Syntax.Pattern exposing (Pattern)
 import Elm.Syntax.Range as Range exposing (Location, Range)
@@ -112,7 +114,8 @@ type alias ProjectContext =
 
 
 type alias ModuleContext =
-    { lookupTable : ModuleNameLookupTable
+    { isExposed : String -> Bool
+    , lookupTable : ModuleNameLookupTable
     , extractSourceCode : Range -> String
     , errors : List PendingError
     }
@@ -139,14 +142,21 @@ initialProjectContext =
 fromProjectToModule : Rule.ContextCreator ProjectContext ModuleContext
 fromProjectToModule =
     Rule.initContextCreator
-        (\lookupTable extractSourceCode projectContext ->
+        (\lookupTable extractSourceCode ast projectContext ->
+            let
+                exposing_ : Exposing
+                exposing_ =
+                    Module.exposingList (Node.value ast.moduleDefinition)
+            in
             { lookupTable = lookupTable
             , extractSourceCode = extractSourceCode
             , errors = []
+            , isExposed = \name -> Exposing.exposesFunction name exposing_
             }
         )
         |> Rule.withModuleNameLookupTable
         |> Rule.withSourceCodeExtractor
+        |> Rule.withFullAst
 
 
 fromModuleToProject : Rule.ContextCreator ModuleContext ProjectContext
