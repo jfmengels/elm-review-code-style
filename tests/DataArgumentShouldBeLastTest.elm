@@ -60,6 +60,13 @@ update model msg =
                             , under = "Model"
                             }
                             |> Review.Test.atExactly { start = { row = 4, column = 10 }, end = { row = 4, column = 15 } }
+                            |> Review.Test.whenFixed """module A exposing (..)
+type Msg = Msg
+type Model = Model
+update : Msg -> Model -> Model
+update msg model =
+    model
+"""
                         ]
         , test "should not report an error when the return type is not in the arguments" <|
             \() ->
