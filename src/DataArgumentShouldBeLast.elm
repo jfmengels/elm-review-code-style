@@ -187,7 +187,7 @@ declarationVisitor node context =
 createFix : ModuleContext -> Int -> Range -> Int -> Range -> Node d -> List (Node Pattern) -> List Fix
 createFix context nbOfArguments argPosition argIndex nextArgumentRange returnType arguments =
     case Maybe.map2 Tuple.pair (listAtIndex argIndex arguments) (getLastArgAt nbOfArguments arguments) of
-        Just ( { rangeToMove }, lastArgPosition ) ->
+        Just ( rangeToMove, lastArgPosition ) ->
             List.concat
                 [ moveCode context
                     { from = { start = argPosition.start, end = nextArgumentRange.start }
@@ -307,7 +307,7 @@ findAndGiveElementAndItsPrevious predicate index previous list =
                 findAndGiveElementAndItsPrevious predicate (index + 1) x xs
 
 
-listAtIndex : Int -> List (Node a) -> Maybe { rangeToMove : Range }
+listAtIndex : Int -> List (Node a) -> Maybe Range
 listAtIndex index list =
     case list of
         [] ->
@@ -317,9 +317,7 @@ listAtIndex index list =
             if index == 0 then
                 case List.head xs of
                     Just next ->
-                        Just
-                            { rangeToMove = { start = (Node.range x).start, end = (Node.range next).start }
-                            }
+                        Just { start = (Node.range x).start, end = (Node.range next).start }
 
                     Nothing ->
                         -- If there is no next element, then not all arguments are declared
