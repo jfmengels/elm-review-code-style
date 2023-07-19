@@ -14,29 +14,71 @@ import Review.ModuleNameLookupTable as ModuleNameLookupTable exposing (ModuleNam
 import Review.Rule as Rule exposing (Rule)
 
 
-{-| Reports... REPLACEME
+{-| Reports functions where the data argument is not the last argument.
 
     config =
         [ DataArgumentShouldBeLast.rule
         ]
 
+This rule will report functions that return the same type as one of the arguments when that argument is not the last.
+
+The idea is to help make idiomatic Elm code, that makes it easy to compose code. For example, given the following functions:
+
+    newBicycle : Bicycle
+
+    withNumberOfGears : Int -> Bicycle -> Bicycle
+
+    withTire : Tire -> Bicycle -> Bicycle
+
+    withDutchBicycleLock : Bicycle -> Bicycle
+
+because the data that is being altered/modified is the last one, we can easily compose these functions using `|>`:
+
+    myBicycle : Bicycle
+    myBicycle =
+        newBicycle
+            |> withNumberOfGears 7
+            |> withTire mountainBikeTire
+            |> withDutchBicycleLock
+
+or using `>>` :
+
+    turnIntoMountainBike =
+        withNumberOfGears 7
+            >> withTire mountainBikeTire
+            >> withDutchBicycleLock
+
+If instead, we had `withNumberOfGears : Bicycle -> Int -> Bicycle`, this would not compose as well.
+
+In Elm code, because of this property, we often write our functions data-last in case we need to compose them with other ones.
+
 
 ## Fail
 
-    a =
-        "REPLACEME example to replace"
+    update : Model -> Msg -> Model
+    update model msg =
+        -- ...
 
 
 ## Success
 
-    a =
-        "REPLACEME example to replace"
+    update : Msg -> Model -> Model
+    update msg model =
+        -- ...
+
+
+## Boundaries of the rule
+
+To avoid false positives, this rule only applies in some conditions.
+
+REPLACEME
 
 
 ## When (not) to enable this rule
 
-This rule is useful when REPLACEME.
-This rule is not useful when REPLACEME.
+This rule can help make your Elm code more idiomatic.
+
+If you feel like this rule reports false positives, please open an issue.
 
 
 ## Try it out
