@@ -43,7 +43,7 @@ update model msg =
                         [ Review.Test.error
                             { message = "The data argument should be last"
                             , details =
-                                [ "In Elm, it is common in functions that return the same type as one of the arguments to have that argument be the last. This makes it for isntance easy to pipe multiple functions working on the same type using `|>`."
+                                [ "In Elm, it is common in functions that return the same type as one of the arguments to have that argument be the last. This makes it for instance easy to compose operations using `|>` or `>>`."
                                 , "Example: instead of `update : Model -> Msg -> Model`, it is more idiomatic to have `update : Msg -> Model -> Model`"
                                 ]
                             , under = "Model"
