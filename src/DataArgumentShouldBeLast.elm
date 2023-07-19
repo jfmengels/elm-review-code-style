@@ -186,7 +186,7 @@ declarationVisitor node context =
 
 createFix : ModuleContext -> Int -> Range -> Int -> Range -> Node d -> List (Node Pattern) -> List Fix
 createFix context nbOfArguments argPosition argIndex nextArgumentRange returnType arguments =
-    case listAtIndex nbOfArguments argIndex arguments of
+    case listAtIndex argIndex arguments of
         Just { rangeToMove } ->
             List.concat
                 [ moveCode context
@@ -307,8 +307,8 @@ findAndGiveElementAndItsPrevious predicate index previous list =
                 findAndGiveElementAndItsPrevious predicate (index + 1) x xs
 
 
-listAtIndex : Int -> Int -> List (Node a) -> Maybe { rangeToMove : Range }
-listAtIndex nbOfArguments index list =
+listAtIndex : Int -> List (Node a) -> Maybe { rangeToMove : Range }
+listAtIndex index list =
     case list of
         [] ->
             Nothing
@@ -327,4 +327,4 @@ listAtIndex nbOfArguments index list =
                         Nothing
 
             else
-                listAtIndex nbOfArguments (index - 1) xs
+                listAtIndex (index - 1) xs
