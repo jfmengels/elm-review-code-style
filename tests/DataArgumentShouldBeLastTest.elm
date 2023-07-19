@@ -84,4 +84,15 @@ update model msg =
 """
                     |> Review.Test.run rule
                     |> Review.Test.expectNoErrors
+        , -- TODO We should check whether we can/should report this
+          test "should not report an error when the type variables are different for the argument and the return type" <|
+            \() ->
+                """module A exposing (..)
+type X a = X a
+map : X a -> (a -> b) -> X b
+update model msg =
+    model
+"""
+                    |> Review.Test.run rule
+                    |> Review.Test.expectNoErrors
         ]
