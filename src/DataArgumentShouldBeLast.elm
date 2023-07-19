@@ -8,6 +8,7 @@ module DataArgumentShouldBeLast exposing (rule)
 
 import Elm.Syntax.Declaration as Declaration exposing (Declaration)
 import Elm.Syntax.Node as Node exposing (Node(..))
+import Elm.Syntax.Pattern exposing (Pattern)
 import Elm.Syntax.Range as Range exposing (Range)
 import Elm.Syntax.TypeAnnotation as TypeAnnotation exposing (RecordField, TypeAnnotation)
 import Review.Fix as Fix exposing (Fix)
@@ -168,7 +169,7 @@ declarationVisitor node context =
                                         ]
                                     }
                                     argPosition
-                                    (createFix context argPosition argIndex nextArgumentRange returnType)
+                                    (createFix context argPosition argIndex nextArgumentRange returnType (Node.value declaration).arguments)
                               ]
                             , context
                             )
@@ -183,8 +184,8 @@ declarationVisitor node context =
             ( [], context )
 
 
-createFix : ModuleContext -> Range -> Int -> Range -> Node d -> List Fix
-createFix context argPosition argIndex nextArgumentRange returnType =
+createFix : ModuleContext -> Range -> Int -> Range -> Node d -> List (Node Pattern) -> List Fix
+createFix context argPosition argIndex nextArgumentRange returnType arguments =
     let
         argTypeRange : Range
         argTypeRange =
