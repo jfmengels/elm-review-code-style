@@ -164,26 +164,29 @@ declarationVisitor node context =
                 Just (Node _ type_) ->
                     case isNotDataLast type_.typeAnnotation context.lookupTable of
                         Just { argPosition, argIndex, nextArgumentRange, nbOfArguments, returnType } ->
-                            ( [ Rule.errorWithFix
-                                    { message = "The data argument should be last"
-                                    , details =
-                                        [ "In Elm, it is common in functions that return the same type as one of the arguments to have that argument be the last. This makes it for instance easy to compose operations using `|>` or `>>`."
-                                        , "Example: instead of `update : Model -> Msg -> Model`, it is more idiomatic to have `update : Msg -> Model -> Model`"
-                                        ]
-                                    }
-                                    argPosition
-                                    (createFix
-                                        context
-                                        nbOfArguments
+                            ( []
+                            , { context
+                                | errors =
+                                    Rule.errorWithFix
+                                        { message = "The data argument should be last"
+                                        , details =
+                                            [ "In Elm, it is common in functions that return the same type as one of the arguments to have that argument be the last. This makes it for instance easy to compose operations using `|>` or `>>`."
+                                            , "Example: instead of `update : Model -> Msg -> Model`, it is more idiomatic to have `update : Msg -> Model -> Model`"
+                                            ]
+                                        }
                                         argPosition
-                                        argIndex
-                                        nextArgumentRange
-                                        returnType
-                                        (Node.range (Node.value declaration).name).end
-                                        (Node.value declaration).arguments
-                                    )
-                              ]
-                            , context
+                                        (createFix
+                                            context
+                                            nbOfArguments
+                                            argPosition
+                                            argIndex
+                                            nextArgumentRange
+                                            returnType
+                                            (Node.range (Node.value declaration).name).end
+                                            (Node.value declaration).arguments
+                                        )
+                                        :: context.errors
+                              }
                             )
 
                         Nothing ->
