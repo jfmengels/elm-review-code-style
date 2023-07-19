@@ -187,7 +187,7 @@ declarationVisitor node context =
             ( [], context )
 
 
-isNotDataLast : Node TypeAnnotation -> ModuleNameLookupTable -> Maybe { argPosition : Range, returnType : TypeAnnotation }
+isNotDataLast : Node TypeAnnotation -> ModuleNameLookupTable -> Maybe { argPosition : Range, returnType : Node TypeAnnotation }
 isNotDataLast type_ lookupTable =
     case getArguments type_ lookupTable [] of
         Nothing ->
@@ -196,11 +196,11 @@ isNotDataLast type_ lookupTable =
         Just { returnType, arguments } ->
             case arguments of
                 firstArg :: rest ->
-                    if Node.value firstArg == returnType then
+                    if Node.value firstArg == Node.value returnType then
                         Nothing
 
                     else
-                        case find (\arg -> Node.value arg == returnType) rest of
+                        case find (\arg -> Node.value arg == Node.value returnType) rest of
                             Just arg ->
                                 Just
                                     { argPosition = Node.range arg
@@ -216,7 +216,7 @@ isNotDataLast type_ lookupTable =
 
 {-| Returned arguments are in the opposite order.
 -}
-getArguments : Node TypeAnnotation -> ModuleNameLookupTable -> List (Node TypeAnnotation) -> Maybe { returnType : TypeAnnotation, arguments : List (Node TypeAnnotation) }
+getArguments : Node TypeAnnotation -> ModuleNameLookupTable -> List (Node TypeAnnotation) -> Maybe { returnType : Node TypeAnnotation, arguments : List (Node TypeAnnotation) }
 getArguments type_ lookupTable argsAcc =
     case Node.value type_ of
         TypeAnnotation.FunctionTypeAnnotation arg return_ ->
@@ -226,7 +226,7 @@ getArguments type_ lookupTable argsAcc =
             case ModuleNameLookupTable.moduleNameFor lookupTable type_ of
                 Just [] ->
                     Just
-                        { returnType = Node.value (removeRange type_)
+                        { returnType = removeRange type_
                         , arguments = argsAcc
                         }
 
