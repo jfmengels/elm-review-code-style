@@ -174,7 +174,7 @@ declarationVisitor node context =
                                     }
                                     argPosition
                                     [ Fix.removeRange argTypeRange
-                                    , Fix.insertAt { row = 4, column = 25 } " Model ->"
+                                    , Fix.insertAt (Node.range returnType).start (context.extractSourceCode argTypeRange)
                                     , Fix.removeRange { start = { row = 5, column = 8 }, end = { row = 5, column = 14 } }
                                     , Fix.insertAt { row = 5, column = 18 } "model "
                                     ]
