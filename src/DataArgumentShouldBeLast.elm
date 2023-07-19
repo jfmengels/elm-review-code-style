@@ -193,9 +193,10 @@ createFix context argPosition argIndex nextArgumentRange returnType arguments =
                     { from = { start = argPosition.start, end = nextArgumentRange.start }
                     , to = (Node.range returnType).start
                     }
-                , [ Fix.removeRange { start = { row = 5, column = 8 }, end = { row = 5, column = 14 } }
-                  , Fix.insertAt { row = 5, column = 18 } "model "
-                  ]
+                , moveCode context
+                    { from = { start = { row = 5, column = 8 }, end = { row = 5, column = 14 } }
+                    , to = { row = 5, column = 18 }
+                    }
                 ]
 
         Nothing ->
