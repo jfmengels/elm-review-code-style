@@ -232,7 +232,7 @@ getArguments type_ lookupTable argsAcc =
             case ModuleNameLookupTable.moduleNameFor lookupTable type_ of
                 Just [] ->
                     Just
-                        { returnType = removeRange type_
+                        { returnType = Node (Node.range type_) <| Node.value <| removeRange type_
                         , arguments = argsAcc
                         }
 
