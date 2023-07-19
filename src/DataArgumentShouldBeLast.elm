@@ -195,7 +195,7 @@ createFix context nbOfArguments argPosition argIndex nextArgumentRange returnTyp
                     }
                 , moveCode context
                     { from = rangeToMove
-                    , to = { row = 5, column = 18 }
+                    , to = lastArgPosition.end
                     }
                 ]
 
