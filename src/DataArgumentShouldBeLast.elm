@@ -194,7 +194,7 @@ createFix context argPosition argIndex nextArgumentRange returnType arguments =
                     , to = (Node.range returnType).start
                     }
                 , moveCode context
-                    { from = { start = { row = 5, column = 8 }, end = { row = 5, column = 14 } }
+                    { from = arg
                     , to = { row = 5, column = 18 }
                     }
                 ]
