@@ -48,6 +48,8 @@ type Model = Model
 update : Model -> Msg -> Model
 update model msg =
     model
+
+value = update model msg
 """
                     |> Review.Test.run rule
                     |> Review.Test.expectErrors
@@ -66,9 +68,11 @@ type Model = Model
 update : Msg -> Model -> Model
 update msg model =
     model
+
+value = update msg model
 """
                         ]
-        , test "should report an error when the return type is present in the arguments but not as the last one (multi-line signature)" <|
+        , test "should report an error when the return type is present in the arguments but not as the last one (multi-line)" <|
             \() ->
                 """module A exposing (..)
 type Msg = Msg
@@ -79,6 +83,15 @@ update :
     -> Model
 update model msg =
     model
+
+value =
+    update
+        msg
+        model
+
+value2 =
+    update msg
+        model
 """
                     |> Review.Test.run rule
                     |> Review.Test.expectErrors
@@ -100,6 +113,15 @@ update :
     -> Model
 update msg model =
     model
+
+value =
+    update
+        model
+        msg
+
+value2 =
+    update model
+        msg
 """
                         ]
         , test "should not report an error when the return type is not in the arguments" <|
