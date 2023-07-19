@@ -114,6 +114,7 @@ type alias ProjectContext =
 type alias ModuleContext =
     { lookupTable : ModuleNameLookupTable
     , extractSourceCode : Range -> String
+    , errors : List (Rule.Error {})
     }
 
 
@@ -135,6 +136,7 @@ fromProjectToModule =
         (\lookupTable extractSourceCode projectContext ->
             { lookupTable = lookupTable
             , extractSourceCode = extractSourceCode
+            , errors = []
             }
         )
         |> Rule.withModuleNameLookupTable
