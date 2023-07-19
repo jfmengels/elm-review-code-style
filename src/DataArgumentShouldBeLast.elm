@@ -121,6 +121,7 @@ moduleVisitor : Rule.ModuleRuleSchema schema ModuleContext -> Rule.ModuleRuleSch
 moduleVisitor schema =
     schema
         |> Rule.withDeclarationEnterVisitor declarationVisitor
+        |> Rule.withFinalModuleEvaluation finalEvaluation
 
 
 initialProjectContext : ProjectContext
@@ -191,6 +192,11 @@ declarationVisitor node context =
 
         _ ->
             ( [], context )
+
+
+finalEvaluation : ModuleContext -> List (Rule.Error {})
+finalEvaluation moduleContext =
+    []
 
 
 createFix : ModuleContext -> Int -> Range -> Int -> Range -> Node d -> Location -> List (Node Pattern) -> List Fix
