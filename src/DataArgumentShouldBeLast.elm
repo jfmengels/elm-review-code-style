@@ -9,7 +9,7 @@ module DataArgumentShouldBeLast exposing (rule)
 import Elm.Syntax.Declaration as Declaration exposing (Declaration)
 import Elm.Syntax.Node as Node exposing (Node(..))
 import Elm.Syntax.Pattern exposing (Pattern)
-import Elm.Syntax.Range as Range exposing (Range)
+import Elm.Syntax.Range as Range exposing (Location, Range)
 import Elm.Syntax.TypeAnnotation as TypeAnnotation exposing (RecordField, TypeAnnotation)
 import Review.Fix as Fix exposing (Fix)
 import Review.ModuleNameLookupTable as ModuleNameLookupTable exposing (ModuleNameLookupTable)
@@ -188,19 +188,25 @@ createFix : ModuleContext -> Range -> Int -> Range -> Node d -> List (Node Patte
 createFix context argPosition argIndex nextArgumentRange returnType arguments =
     case listAtIndex argIndex arguments of
         Just arg ->
-            let
-                argTypeRange : Range
-                argTypeRange =
-                    { start = argPosition.start, end = nextArgumentRange.start }
-            in
-            [ Fix.removeRange argTypeRange
-            , Fix.insertAt (Node.range returnType).start (context.extractSourceCode argTypeRange)
-            , Fix.removeRange { start = { row = 5, column = 8 }, end = { row = 5, column = 14 } }
-            , Fix.insertAt { row = 5, column = 18 } "model "
-            ]
+            List.concat
+                [ moveCode context
+                    { from = { start = argPosition.start, end = nextArgumentRange.start }
+                    , to = (Node.range returnType).start
+                    }
+                , [ Fix.removeRange { start = { row = 5, column = 8 }, end = { row = 5, column = 14 } }
+                  , Fix.insertAt { row = 5, column = 18 } "model "
+                  ]
+                ]
 
         Nothing ->
             []
+
+
+moveCode : ModuleContext -> { from : Range, to : Location } -> List Fix
+moveCode context { from, to } =
+    [ Fix.removeRange from
+    , Fix.insertAt to (context.extractSourceCode from)
+    ]
 
 
 isNotDataLast : Node TypeAnnotation -> ModuleNameLookupTable -> Maybe { argPosition : Range, argIndex : Int, nextArgumentRange : Range, returnType : Node TypeAnnotation }
