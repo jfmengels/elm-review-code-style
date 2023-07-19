@@ -10,7 +10,7 @@ all =
     describe "DataArgumentShouldBeLast"
         [ test "should not report an error when there is no type annotation" <|
             \() ->
-                """module A exposing (..)
+                """module A exposing (main)
 type Msg = Msg
 type Model = Model
 update model msg =
@@ -20,7 +20,7 @@ update model msg =
                     |> Review.Test.expectNoErrors
         , test "should not report an error when the data is last" <|
             \() ->
-                """module A exposing (..)
+                """module A exposing (main)
 type Msg = Msg
 type Model = Model
 update : Msg -> Model -> Model
@@ -31,7 +31,7 @@ update msg model =
                     |> Review.Test.expectNoErrors
         , test "should not report an error when the data is last and also present as a different argument" <|
             \() ->
-                """module A exposing (..)
+                """module A exposing (main)
 type Msg = Msg
 type Model = Model
 update : Msg -> Model -> Model -> Model
@@ -42,7 +42,7 @@ update msg model1 model2 =
                     |> Review.Test.expectNoErrors
         , test "should report an error when the return type is present in the arguments but not as the last one" <|
             \() ->
-                """module A exposing (..)
+                """module A exposing (main)
 type Msg = Msg
 type Model = Model
 update : Model -> Msg -> Model
@@ -62,7 +62,7 @@ value = update model msg
                             , under = "Model"
                             }
                             |> Review.Test.atExactly { start = { row = 4, column = 10 }, end = { row = 4, column = 15 } }
-                            |> Review.Test.whenFixed """module A exposing (..)
+                            |> Review.Test.whenFixed """module A exposing (main)
 type Msg = Msg
 type Model = Model
 update : Msg -> Model -> Model
@@ -74,7 +74,7 @@ value = update msg model
                         ]
         , test "should report an error when the return type is present in the arguments but not as the last one (multi-line)" <|
             \() ->
-                """module A exposing (..)
+                """module A exposing (main)
 type Msg = Msg
 type Model = Model
 update :
@@ -104,7 +104,7 @@ value2 =
                             , under = "Model"
                             }
                             |> Review.Test.atExactly { start = { row = 5, column = 5 }, end = { row = 5, column = 10 } }
-                            |> Review.Test.whenFixed """module A exposing (..)
+                            |> Review.Test.whenFixed """module A exposing (main)
 type Msg = Msg
 type Model = Model
 update :
@@ -126,7 +126,7 @@ value2 =
                         ]
         , test "should not expect a fix if not all arguments in the declaration" <|
             \() ->
-                """module A exposing (..)
+                """module A exposing (main)
 type Msg = Msg
 type Model = Model
 update :
@@ -150,7 +150,7 @@ update model =
                         ]
         , test "should not report an error when the return type is not in the arguments" <|
             \() ->
-                """module A exposing (..)
+                """module A exposing (main)
 type Msg = Msg
 type Model = Model
 type OtherThing = OtherThing
@@ -162,7 +162,7 @@ fn otherThing msg =
                     |> Review.Test.expectNoErrors
         , test "should not report an error when the data is there multiple times but also as the last argument" <|
             \() ->
-                """module A exposing (..)
+                """module A exposing (main)
 type Msg = Msg
 type Model = Model
 add : Model -> Model -> Model
@@ -173,7 +173,7 @@ add a b =
                     |> Review.Test.expectNoErrors
         , test "should not report an error when the return type is in arguments but not last, but the type is not defined in the same file" <|
             \() ->
-                """module A exposing (..)
+                """module A exposing (main)
 import Model exposing (Model)
 type Msg = Msg
 update : Model -> Msg -> Model
@@ -185,7 +185,7 @@ update model msg =
         , -- TODO We should check whether we can/should report this
           test "should not report an error when the type variables are different for the argument and the return type" <|
             \() ->
-                """module A exposing (..)
+                """module A exposing (main)
 type X a = X a
 map : X a -> (a -> b) -> X b
 update model msg =
