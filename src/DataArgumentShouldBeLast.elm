@@ -10,7 +10,7 @@ import Elm.Syntax.Declaration as Declaration exposing (Declaration)
 import Elm.Syntax.Node as Node exposing (Node(..))
 import Elm.Syntax.Range as Range exposing (Range)
 import Elm.Syntax.TypeAnnotation as TypeAnnotation exposing (RecordField, TypeAnnotation)
-import Review.Fix as Fix
+import Review.Fix as Fix exposing (Fix)
 import Review.ModuleNameLookupTable as ModuleNameLookupTable exposing (ModuleNameLookupTable)
 import Review.Rule as Rule exposing (Rule)
 
@@ -160,11 +160,6 @@ declarationVisitor node context =
                 Just (Node _ type_) ->
                     case isNotDataLast type_.typeAnnotation context.lookupTable of
                         Just { argPosition, nextArgumentRange, returnType } ->
-                            let
-                                argTypeRange : Range
-                                argTypeRange =
-                                    { start = argPosition.start, end = nextArgumentRange.start }
-                            in
                             ( [ Rule.errorWithFix
                                     { message = "The data argument should be last"
                                     , details =
@@ -173,11 +168,7 @@ declarationVisitor node context =
                                         ]
                                     }
                                     argPosition
-                                    [ Fix.removeRange argTypeRange
-                                    , Fix.insertAt (Node.range returnType).start (context.extractSourceCode argTypeRange)
-                                    , Fix.removeRange { start = { row = 5, column = 8 }, end = { row = 5, column = 14 } }
-                                    , Fix.insertAt { row = 5, column = 18 } "model "
-                                    ]
+                                    (createFix context argPosition nextArgumentRange returnType)
                               ]
                             , context
                             )
@@ -190,6 +181,20 @@ declarationVisitor node context =
 
         _ ->
             ( [], context )
+
+
+createFix : ModuleContext -> Range -> Range -> Node d -> List Fix
+createFix context argPosition nextArgumentRange returnType =
+    let
+        argTypeRange : Range
+        argTypeRange =
+            { start = argPosition.start, end = nextArgumentRange.start }
+    in
+    [ Fix.removeRange argTypeRange
+    , Fix.insertAt (Node.range returnType).start (context.extractSourceCode argTypeRange)
+    , Fix.removeRange { start = { row = 5, column = 8 }, end = { row = 5, column = 14 } }
+    , Fix.insertAt { row = 5, column = 18 } "model "
+    ]
 
 
 isNotDataLast : Node TypeAnnotation -> ModuleNameLookupTable -> Maybe { argPosition : Range, nextArgumentRange : Range, returnType : Node TypeAnnotation }
