@@ -169,7 +169,16 @@ declarationVisitor node context =
                                         ]
                                     }
                                     argPosition
-                                    (createFix context nbOfArguments argPosition argIndex nextArgumentRange returnType (Node.value declaration).arguments)
+                                    (createFix
+                                        context
+                                        nbOfArguments
+                                        argPosition
+                                        argIndex
+                                        nextArgumentRange
+                                        returnType
+                                        (Node.range (Node.value declaration).name).end
+                                        (Node.value declaration).arguments
+                                    )
                               ]
                             , context
                             )
@@ -184,9 +193,9 @@ declarationVisitor node context =
             ( [], context )
 
 
-createFix : ModuleContext -> Int -> Range -> Int -> Range -> Node d -> List (Node Pattern) -> List Fix
-createFix context nbOfArguments argPosition argIndex nextArgumentRange returnType arguments =
-    case Maybe.map2 Tuple.pair (listAtIndex argIndex arguments) (getLastArgAt nbOfArguments arguments) of
+createFix : ModuleContext -> Int -> Range -> Int -> Range -> Node d -> Location -> List (Node Pattern) -> List Fix
+createFix context nbOfArguments argPosition argIndex nextArgumentRange returnType fnNameEndLocation arguments =
+    case Maybe.map2 Tuple.pair (listAtIndex argIndex arguments fnNameEndLocation) (getLastArgAt nbOfArguments arguments) of
         Just ( rangeToMove, lastArgPosition ) ->
             List.concat
                 [ moveCode context
@@ -307,25 +316,18 @@ findAndGiveElementAndItsPrevious predicate index previous list =
                 findAndGiveElementAndItsPrevious predicate (index + 1) x xs
 
 
-listAtIndex : Int -> List (Node a) -> Maybe Range
-listAtIndex index list =
+listAtIndex : Int -> List (Node a) -> Location -> Maybe Range
+listAtIndex index list prevPosition =
     case list of
         [] ->
             Nothing
 
         x :: xs ->
             if index == 0 then
-                case List.head xs of
-                    Just next ->
-                        Just { start = (Node.range x).start, end = (Node.range next).start }
-
-                    Nothing ->
-                        -- If there is no next element, then not all arguments are declared
-                        -- and we should avoid providing a fix.
-                        Nothing
+                Just { start = prevPosition, end = (Node.range x).end }
 
             else
-                listAtIndex (index - 1) xs
+                listAtIndex (index - 1) xs (Node.range x).end
 
 
 getLastArgAt : Int -> List (Node a) -> Maybe Range
