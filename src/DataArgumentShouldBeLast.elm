@@ -244,6 +244,13 @@ expressionVisitor node context =
                 Just error ->
                     case ModuleNameLookupTable.moduleNameFor context.lookupTable node of
                         Just [] ->
+                            let
+                                cancelFixesAndReportError : () -> ( List (Rule.Error {}), ModuleContext )
+                                cancelFixesAndReportError () =
+                                    ( [ createError { range = error.range, fixes = [] } ]
+                                    , { context | errors = Dict.remove name context.errors }
+                                    )
+                            in
                             if List.length arguments == error.nbOfArguments then
                                 -- TODO Add fixes
                                 ( []
@@ -254,9 +261,7 @@ expressionVisitor node context =
                                 )
 
                             else
-                                ( [ createError { range = error.range, fixes = [] } ]
-                                , { context | errors = Dict.remove name context.errors }
-                                )
+                                cancelFixesAndReportError ()
 
                         _ ->
                             ( [], context )
