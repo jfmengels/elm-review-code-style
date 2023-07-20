@@ -236,7 +236,12 @@ expressionVisitor : Node Expression -> ModuleContext -> ( List (Rule.Error {}), 
 expressionVisitor node context =
     case Node.value node of
         Expression.FunctionOrValue [] name ->
-            ( [], context )
+            case ModuleNameLookupTable.moduleNameFor context.lookupTable node of
+                Just [] ->
+                    ( [], context )
+
+                _ ->
+                    ( [], context )
 
         _ ->
             ( [], context )
