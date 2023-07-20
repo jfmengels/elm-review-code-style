@@ -185,15 +185,19 @@ declarationVisitor node context =
                                 | errors =
                                     { range = argPosition
                                     , fixes =
-                                        createFix
-                                            context
-                                            nbOfArguments
-                                            argPosition
-                                            argIndex
-                                            nextArgumentRange
-                                            returnType
-                                            (Node.range (Node.value declaration).name).end
-                                            (Node.value declaration).arguments
+                                        if context.isExposed (Node.value (Node.value declaration).name) then
+                                            []
+
+                                        else
+                                            createFix
+                                                context
+                                                nbOfArguments
+                                                argPosition
+                                                argIndex
+                                                nextArgumentRange
+                                                returnType
+                                                (Node.range (Node.value declaration).name).end
+                                                (Node.value declaration).arguments
                                     }
                                         :: context.errors
                               }
