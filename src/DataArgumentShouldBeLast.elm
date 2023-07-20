@@ -255,20 +255,24 @@ expressionVisitor node context =
 finalEvaluation : ModuleContext -> List (Rule.Error {})
 finalEvaluation moduleContext =
     Dict.foldl
-        (\_ { range, fixes } errors ->
-            Rule.errorWithFix
-                { message = "The data argument should be last"
-                , details =
-                    [ "In Elm, it is common in functions that return the same type as one of the arguments to have that argument be the last. This makes it for instance easy to compose operations using `|>` or `>>`."
-                    , "Example: instead of `update : Model -> Msg -> Model`, it is more idiomatic to have `update : Msg -> Model -> Model`"
-                    ]
-                }
-                range
-                fixes
-                :: errors
+        (\_ error errors ->
+            createError error :: errors
         )
         []
         moduleContext.errors
+
+
+createError : PendingError -> Rule.Error {}
+createError { range, fixes } =
+    Rule.errorWithFix
+        { message = "The data argument should be last"
+        , details =
+            [ "In Elm, it is common in functions that return the same type as one of the arguments to have that argument be the last. This makes it for instance easy to compose operations using `|>` or `>>`."
+            , "Example: instead of `update : Model -> Msg -> Model`, it is more idiomatic to have `update : Msg -> Model -> Model`"
+            ]
+        }
+        range
+        fixes
 
 
 createFix : ModuleContext -> Int -> Range -> Int -> Range -> Node d -> Location -> List (Node Pattern) -> List Fix
