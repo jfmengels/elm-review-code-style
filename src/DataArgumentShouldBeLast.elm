@@ -8,6 +8,7 @@ module DataArgumentShouldBeLast exposing (rule)
 
 import Elm.Syntax.Declaration as Declaration exposing (Declaration)
 import Elm.Syntax.Exposing as Exposing exposing (Exposing)
+import Elm.Syntax.Expression as Expression exposing (Expression)
 import Elm.Syntax.Module as Module
 import Elm.Syntax.Node as Node exposing (Node(..))
 import Elm.Syntax.Pattern exposing (Pattern)
@@ -131,6 +132,7 @@ moduleVisitor : Rule.ModuleRuleSchema schema ModuleContext -> Rule.ModuleRuleSch
 moduleVisitor schema =
     schema
         |> Rule.withDeclarationEnterVisitor declarationVisitor
+        |> Rule.withExpressionEnterVisitor expressionVisitor
         |> Rule.withFinalModuleEvaluation finalEvaluation
 
 
@@ -208,6 +210,16 @@ declarationVisitor node context =
 
                 Nothing ->
                     ( [], context )
+
+        _ ->
+            ( [], context )
+
+
+expressionVisitor : Node Expression -> ModuleContext -> ( List (Rule.Error {}), ModuleContext )
+expressionVisitor node context =
+    case Node.value node of
+        Expression.FunctionOrValue [] name ->
+            ( [], context )
 
         _ ->
             ( [], context )
