@@ -6,6 +6,7 @@ module DataArgumentShouldBeLast exposing (rule)
 
 -}
 
+import Dict exposing (Dict)
 import Elm.Syntax.Declaration as Declaration exposing (Declaration)
 import Elm.Syntax.Exposing as Exposing exposing (Exposing)
 import Elm.Syntax.Expression as Expression exposing (Expression)
@@ -118,7 +119,7 @@ type alias ModuleContext =
     { isExposed : String -> Bool
     , lookupTable : ModuleNameLookupTable
     , extractSourceCode : Range -> String
-    , errors : List PendingError
+    , errors : Dict String PendingError
     }
 
 
@@ -152,7 +153,7 @@ fromProjectToModule =
             in
             { lookupTable = lookupTable
             , extractSourceCode = extractSourceCode
-            , errors = []
+            , errors = Dict.empty
             , isExposed = \name -> Exposing.exposesFunction name exposing_
             }
         )
@@ -199,23 +200,25 @@ declarationVisitor node context =
                             ( []
                             , { context
                                 | errors =
-                                    { range = argPosition
-                                    , fixes =
-                                        if context.isExposed (Node.value (Node.value declaration).name) then
-                                            []
+                                    Dict.insert
+                                        (Node.value (Node.value declaration).name)
+                                        { range = argPosition
+                                        , fixes =
+                                            if context.isExposed (Node.value (Node.value declaration).name) then
+                                                []
 
-                                        else
-                                            createFix
-                                                context
-                                                nbOfArguments
-                                                argPosition
-                                                argIndex
-                                                nextArgumentRange
-                                                returnType
-                                                (Node.range (Node.value declaration).name).end
-                                                (Node.value declaration).arguments
-                                    }
-                                        :: context.errors
+                                            else
+                                                createFix
+                                                    context
+                                                    nbOfArguments
+                                                    argPosition
+                                                    argIndex
+                                                    nextArgumentRange
+                                                    returnType
+                                                    (Node.range (Node.value declaration).name).end
+                                                    (Node.value declaration).arguments
+                                        }
+                                        context.errors
                               }
                             )
 
@@ -241,8 +244,8 @@ expressionVisitor node context =
 
 finalEvaluation : ModuleContext -> List (Rule.Error {})
 finalEvaluation moduleContext =
-    List.map
-        (\{ range, fixes } ->
+    Dict.foldl
+        (\_ { range, fixes } errors ->
             Rule.errorWithFix
                 { message = "The data argument should be last"
                 , details =
@@ -252,7 +255,9 @@ finalEvaluation moduleContext =
                 }
                 range
                 fixes
+                :: errors
         )
+        []
         moduleContext.errors
 
 
