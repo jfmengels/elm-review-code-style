@@ -239,23 +239,44 @@ declarationVisitor node context =
 expressionVisitor : Node Expression -> ModuleContext -> ( List (Rule.Error {}), ModuleContext )
 expressionVisitor node context =
     case Node.value node of
-        Expression.Application ((Node _ (Expression.FunctionOrValue [] name)) :: arguments) ->
-            ( [], context )
-
-        Expression.FunctionOrValue [] name ->
+        Expression.Application ((Node fnRange (Expression.FunctionOrValue [] name)) :: arguments) ->
             case Dict.get name context.errors of
                 Just error ->
                     case ModuleNameLookupTable.moduleNameFor context.lookupTable node of
                         Just [] ->
-                            ( [ createError { range = error.range, fixes = [] } ]
-                            , { context | errors = Dict.remove name context.errors }
-                            )
+                            if List.length arguments == error.nbOfArguments then
+                                -- TODO Add fixes
+                                ( [], { context | rangeToIgnore = Just fnRange } )
+
+                            else
+                                ( [ createError { range = error.range, fixes = [] } ]
+                                , { context | errors = Dict.remove name context.errors }
+                                )
 
                         _ ->
                             ( [], context )
 
                 Nothing ->
                     ( [], context )
+
+        Expression.FunctionOrValue [] name ->
+            if context.rangeToIgnore == Just (Node.range node) then
+                ( [], { context | rangeToIgnore = Nothing } )
+
+            else
+                case Dict.get name context.errors of
+                    Just error ->
+                        case ModuleNameLookupTable.moduleNameFor context.lookupTable node of
+                            Just [] ->
+                                ( [ createError { range = error.range, fixes = [] } ]
+                                , { context | errors = Dict.remove name context.errors }
+                                )
+
+                            _ ->
+                                ( [], context )
+
+                    Nothing ->
+                        ( [], context )
 
         _ ->
             ( [], context )
