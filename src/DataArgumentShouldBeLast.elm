@@ -246,7 +246,12 @@ expressionVisitor node context =
                         Just [] ->
                             if List.length arguments == error.nbOfArguments then
                                 -- TODO Add fixes
-                                ( [], { context | rangeToIgnore = Just fnRange } )
+                                ( []
+                                , { context
+                                    | rangeToIgnore = Just fnRange
+                                    , errors = Dict.insert name error context.errors
+                                  }
+                                )
 
                             else
                                 ( [ createError { range = error.range, fixes = [] } ]
