@@ -131,7 +131,7 @@ type alias PendingError =
 moduleVisitor : Rule.ModuleRuleSchema schema ModuleContext -> Rule.ModuleRuleSchema { schema | hasAtLeastOneVisitor : () } ModuleContext
 moduleVisitor schema =
     schema
-        |> Rule.withDeclarationEnterVisitor declarationVisitor
+        |> Rule.withDeclarationListVisitor declarationListVisitor
         |> Rule.withExpressionEnterVisitor expressionVisitor
         |> Rule.withFinalModuleEvaluation finalEvaluation
 
@@ -172,6 +172,20 @@ fromModuleToProject =
 foldProjectContexts : ProjectContext -> ProjectContext -> ProjectContext
 foldProjectContexts new previous =
     {}
+
+
+declarationListVisitor : List (Node Declaration) -> ModuleContext -> ( List (Rule.Error {}), ModuleContext )
+declarationListVisitor nodes context =
+    List.foldl
+        (\node ( previousErrors, previousContext ) ->
+            let
+                ( newErrors, newContext ) =
+                    declarationVisitor node previousContext
+            in
+            ( newErrors ++ previousErrors, newContext )
+        )
+        ( [], context )
+        nodes
 
 
 declarationVisitor : Node Declaration -> ModuleContext -> ( List (Rule.Error {}), ModuleContext )
