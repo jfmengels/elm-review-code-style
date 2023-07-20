@@ -126,6 +126,7 @@ type alias ModuleContext =
 
 type alias PendingError =
     { range : Range
+    , nbOfArguments : Int
     , fixes : List Fix
     }
 
@@ -205,6 +206,7 @@ declarationVisitor node context =
                                     Dict.insert
                                         (Node.value (Node.value declaration).name)
                                         { range = argPosition
+                                        , nbOfArguments = nbOfArguments
                                         , fixes =
                                             if context.isExposed (Node.value (Node.value declaration).name) then
                                                 []
