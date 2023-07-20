@@ -249,7 +249,7 @@ expressionVisitor node context =
                                 ( []
                                 , { context
                                     | rangeToIgnore = Just fnRange
-                                    , errors = Dict.insert name error context.errors
+                                    , errors = Dict.insert name { error | fixes = error.fixes } context.errors
                                   }
                                 )
 
