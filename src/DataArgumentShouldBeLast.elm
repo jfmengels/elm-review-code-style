@@ -253,7 +253,7 @@ expressionVisitor node context =
                             in
                             if List.length arguments == error.nbOfArguments then
                                 -- TODO Add fixes
-                                case [] of
+                                case createFixesForFunctionCall arguments of
                                     [] ->
                                         cancelFixesAndReportError ()
 
@@ -295,6 +295,13 @@ expressionVisitor node context =
 
         _ ->
             ( [], context )
+
+
+createFixesForFunctionCall arguments =
+    -- TODO Create a fix for the function call.
+    -- We probably need to get more information like the position of the argument to move
+    -- That needs to come from the PendingError, but we don't store it there yet.
+    []
 
 
 finalEvaluation : ModuleContext -> List (Rule.Error {})
