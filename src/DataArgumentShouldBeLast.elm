@@ -240,7 +240,9 @@ expressionVisitor node context =
                 Just error ->
                     case ModuleNameLookupTable.moduleNameFor context.lookupTable node of
                         Just [] ->
-                            ( [], context )
+                            ( [ createError { range = error.range, fixes = [] } ]
+                            , { context | errors = Dict.remove name context.errors }
+                            )
 
                         _ ->
                             ( [], context )
