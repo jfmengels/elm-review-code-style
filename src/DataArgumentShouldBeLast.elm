@@ -237,6 +237,9 @@ declarationVisitor node context =
 expressionVisitor : Node Expression -> ModuleContext -> ( List (Rule.Error {}), ModuleContext )
 expressionVisitor node context =
     case Node.value node of
+        Expression.Application ((Node _ (Expression.FunctionOrValue [] name)) :: arguments) ->
+            ( [], context )
+
         Expression.FunctionOrValue [] name ->
             case Dict.get name context.errors of
                 Just error ->
