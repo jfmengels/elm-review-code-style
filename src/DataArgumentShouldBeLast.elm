@@ -269,7 +269,7 @@ finalEvaluation moduleContext =
         moduleContext.errors
 
 
-createError : PendingError -> Rule.Error {}
+createError : { a | range : Range, fixes : List Fix } -> Rule.Error {}
 createError { range, fixes } =
     Rule.errorWithFix
         { message = "The data argument should be last"
