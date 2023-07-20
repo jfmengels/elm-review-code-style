@@ -120,6 +120,7 @@ type alias ModuleContext =
     , lookupTable : ModuleNameLookupTable
     , extractSourceCode : Range -> String
     , errors : Dict String PendingError
+    , rangeToIgnore : Maybe Range
     }
 
 
@@ -155,6 +156,7 @@ fromProjectToModule =
             , extractSourceCode = extractSourceCode
             , errors = Dict.empty
             , isExposed = \name -> Exposing.exposesFunction name exposing_
+            , rangeToIgnore = Nothing
             }
         )
         |> Rule.withModuleNameLookupTable
