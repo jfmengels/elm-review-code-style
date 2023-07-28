@@ -207,38 +207,7 @@ expressionVisitor : Node Expression -> ModuleContext -> ( List (Rule.Error {}), 
 expressionVisitor node context =
     case Node.value node of
         Expression.Application ((Node fnRange (Expression.FunctionOrValue [] name)) :: arguments) ->
-            case Dict.get name context.errors of
-                Just error ->
-                    case ModuleNameLookupTable.moduleNameFor context.lookupTable node of
-                        Just [] ->
-                            let
-                                cancelFixesAndReportError : () -> ( List (Rule.Error {}), ModuleContext )
-                                cancelFixesAndReportError () =
-                                    ( [ createError { range = error.range, fixes = [] } ]
-                                    , { context | errors = Dict.remove name context.errors }
-                                    )
-                            in
-                            if List.length arguments == error.nbOfArguments then
-                                case createFixesForFunctionCall context error fnRange arguments of
-                                    [] ->
-                                        cancelFixesAndReportError ()
-
-                                    newFixes ->
-                                        ( []
-                                        , { context
-                                            | rangeToIgnore = Just fnRange
-                                            , errors = Dict.insert name { error | fixes = newFixes ++ error.fixes } context.errors
-                                          }
-                                        )
-
-                            else
-                                cancelFixesAndReportError ()
-
-                        _ ->
-                            ( [], context )
-
-                Nothing ->
-                    ( [], context )
+            visitFunctionCall context node fnRange name arguments
 
         Expression.FunctionOrValue [] name ->
             if context.rangeToIgnore == Just (Node.range node) then
@@ -260,6 +229,48 @@ expressionVisitor node context =
                         ( [], context )
 
         _ ->
+            ( [], context )
+
+
+visitFunctionCall :
+    ModuleContext
+    -> Node a
+    -> Range
+    -> String
+    -> List (Node Expression)
+    -> ( List (Rule.Error {}), ModuleContext )
+visitFunctionCall context node fnRange name arguments =
+    case Dict.get name context.errors of
+        Just error ->
+            case ModuleNameLookupTable.moduleNameFor context.lookupTable node of
+                Just [] ->
+                    let
+                        cancelFixesAndReportError : () -> ( List (Rule.Error {}), ModuleContext )
+                        cancelFixesAndReportError () =
+                            ( [ createError { range = error.range, fixes = [] } ]
+                            , { context | errors = Dict.remove name context.errors }
+                            )
+                    in
+                    if List.length arguments == error.nbOfArguments then
+                        case createFixesForFunctionCall context error fnRange arguments of
+                            [] ->
+                                cancelFixesAndReportError ()
+
+                            newFixes ->
+                                ( []
+                                , { context
+                                    | rangeToIgnore = Just fnRange
+                                    , errors = Dict.insert name { error | fixes = newFixes ++ error.fixes } context.errors
+                                  }
+                                )
+
+                    else
+                        cancelFixesAndReportError ()
+
+                _ ->
+                    ( [], context )
+
+        Nothing ->
             ( [], context )
 
 
