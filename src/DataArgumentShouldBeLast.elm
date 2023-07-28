@@ -400,8 +400,8 @@ isNotDataLast type_ lookupTable =
 getArguments : Node TypeAnnotation -> ModuleNameLookupTable -> List (Node TypeAnnotation) -> Maybe { returnType : Node TypeAnnotation, arguments : List (Node TypeAnnotation) }
 getArguments type_ lookupTable argsAcc =
     case Node.value type_ of
-        TypeAnnotation.FunctionTypeAnnotation arg return_ ->
-            getArguments return_ lookupTable ((Node (Node.range arg) <| Node.value <| removeRange arg) :: argsAcc)
+        TypeAnnotation.FunctionTypeAnnotation arg return ->
+            getArguments return lookupTable ((Node (Node.range arg) <| Node.value <| removeRange arg) :: argsAcc)
 
         TypeAnnotation.Typed _ _ ->
             case ModuleNameLookupTable.moduleNameFor lookupTable type_ of
