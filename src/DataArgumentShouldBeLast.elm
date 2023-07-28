@@ -127,6 +127,7 @@ type alias ModuleContext =
 type alias PendingError =
     { range : Range
     , nbOfArguments : Int
+    , indexOfMovedArgument : Int
     , fixes : List Fix
     }
 
@@ -207,6 +208,7 @@ declarationVisitor node context =
                                         (Node.value (Node.value declaration).name)
                                         { range = argPosition
                                         , nbOfArguments = nbOfArguments
+                                        , indexOfMovedArgument = argIndex
                                         , fixes =
                                             if context.isExposed (Node.value (Node.value declaration).name) then
                                                 []
