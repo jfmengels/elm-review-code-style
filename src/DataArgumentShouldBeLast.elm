@@ -254,7 +254,7 @@ expressionVisitor node context =
                                     )
                             in
                             if List.length arguments == error.nbOfArguments then
-                                case createFixesForFunctionCall error arguments of
+                                case createFixesForFunctionCall context error arguments of
                                     [] ->
                                         cancelFixesAndReportError ()
 
@@ -298,8 +298,8 @@ expressionVisitor node context =
             ( [], context )
 
 
-createFixesForFunctionCall : PendingError -> List (Node Expression) -> List Fix
-createFixesForFunctionCall error arguments =
+createFixesForFunctionCall : ModuleContext -> PendingError -> List (Node Expression) -> List Fix
+createFixesForFunctionCall context error arguments =
     -- TODO Create a fix for the function call.
     -- We probably need to get more information like the position of the argument to move
     -- That needs to come from the PendingError, but we don't store it there yet.
