@@ -254,15 +254,15 @@ expressionVisitor node context =
                                     )
                             in
                             if List.length arguments == error.nbOfArguments then
-                                case createFixesForFunctionCall context error arguments of
+                                case createFixesForFunctionCall context error fnRange arguments of
                                     [] ->
                                         cancelFixesAndReportError ()
 
-                                    _ ->
+                                    newFixes ->
                                         ( []
                                         , { context
                                             | rangeToIgnore = Just fnRange
-                                            , errors = Dict.insert name { error | fixes = error.fixes } context.errors
+                                            , errors = Dict.insert name { error | fixes = newFixes ++ error.fixes } context.errors
                                           }
                                         )
 
@@ -298,12 +298,22 @@ expressionVisitor node context =
             ( [], context )
 
 
-createFixesForFunctionCall : ModuleContext -> PendingError -> List (Node Expression) -> List Fix
-createFixesForFunctionCall context error arguments =
-    -- TODO Create a fix for the function call.
-    -- We probably need to get more information like the position of the argument to move
-    -- That needs to come from the PendingError, but we don't store it there yet.
-    []
+createFixesForFunctionCall : ModuleContext -> PendingError -> Range -> List (Node Expression) -> List Fix
+createFixesForFunctionCall context error fnNameLocation arguments =
+    case getLastArgAt error.nbOfArguments arguments of
+        Just { end } ->
+            case listAtIndex error.indexOfMovedArgument arguments fnNameLocation.end of
+                Just range ->
+                    moveCode context
+                        { from = range
+                        , to = end
+                        }
+
+                Nothing ->
+                    []
+
+        Nothing ->
+            []
 
 
 finalEvaluation : ModuleContext -> List (Rule.Error {})

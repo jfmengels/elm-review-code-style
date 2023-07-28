@@ -86,12 +86,12 @@ update model msg =
 
 value =
     update
-        msg
         model
+        msg
 
 value2 =
-    update msg
-        model
+    update model
+        msg
 """
                     |> Review.Test.run rule
                     |> Review.Test.expectErrors
@@ -116,12 +116,12 @@ update msg model =
 
 value =
     update
-        model
         msg
+        model
 
 value2 =
-    update model
-        msg
+    update
+        msg model
 """
                         ]
         , test "should not expect a fix if not all arguments are in the declaration" <|
