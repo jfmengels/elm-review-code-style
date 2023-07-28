@@ -98,21 +98,12 @@ elm-review --template jfmengels/elm-review-code-style/example --rules DataArgume
 -}
 rule : Rule
 rule =
-    Rule.newProjectRuleSchema "DataArgumentShouldBeLast" initialProjectContext
-        |> Rule.withModuleVisitor moduleVisitor
-        |> Rule.withModuleContextUsingContextCreator
-            { fromProjectToModule = fromProjectToModule
-            , fromModuleToProject = fromModuleToProject
-            , foldProjectContexts = foldProjectContexts
-            }
-        -- Enable this if modules need to get information from other modules
-        -- |> Rule.withContextFromImportedModules
-        |> Rule.providesFixesForProjectRule
-        |> Rule.fromProjectRuleSchema
-
-
-type alias ProjectContext =
-    {}
+    Rule.newModuleRuleSchemaUsingContextCreator "DataArgumentShouldBeLast" initialContext
+        |> Rule.withDeclarationListVisitor declarationListVisitor
+        |> Rule.withExpressionEnterVisitor expressionVisitor
+        |> Rule.withFinalModuleEvaluation finalEvaluation
+        |> Rule.providesFixesForModuleRule
+        |> Rule.fromModuleRuleSchema
 
 
 type alias ModuleContext =
@@ -132,23 +123,10 @@ type alias PendingError =
     }
 
 
-moduleVisitor : Rule.ModuleRuleSchema schema ModuleContext -> Rule.ModuleRuleSchema { schema | hasAtLeastOneVisitor : () } ModuleContext
-moduleVisitor schema =
-    schema
-        |> Rule.withDeclarationListVisitor declarationListVisitor
-        |> Rule.withExpressionEnterVisitor expressionVisitor
-        |> Rule.withFinalModuleEvaluation finalEvaluation
-
-
-initialProjectContext : ProjectContext
-initialProjectContext =
-    {}
-
-
-fromProjectToModule : Rule.ContextCreator ProjectContext ModuleContext
-fromProjectToModule =
+initialContext : Rule.ContextCreator () ModuleContext
+initialContext =
     Rule.initContextCreator
-        (\lookupTable extractSourceCode ast projectContext ->
+        (\lookupTable extractSourceCode ast () ->
             let
                 exposing_ : Exposing
                 exposing_ =
@@ -164,19 +142,6 @@ fromProjectToModule =
         |> Rule.withModuleNameLookupTable
         |> Rule.withSourceCodeExtractor
         |> Rule.withFullAst
-
-
-fromModuleToProject : Rule.ContextCreator ModuleContext ProjectContext
-fromModuleToProject =
-    Rule.initContextCreator
-        (\moduleContext ->
-            {}
-        )
-
-
-foldProjectContexts : ProjectContext -> ProjectContext -> ProjectContext
-foldProjectContexts new previous =
-    {}
 
 
 declarationListVisitor : List (Node Declaration) -> ModuleContext -> ( List (Rule.Error {}), ModuleContext )
