@@ -372,36 +372,82 @@ isNotDataLast type_ lookupTable =
 
 
 isTypeEqual : Node TypeAnnotation -> Node TypeAnnotation -> Bool
-isTypeEqual node (Node _ returnType) =
+isTypeEqual node returnType =
     case Node.value node of
         TypeAnnotation.Typed _ _ ->
-            Node.value node == returnType
+            Node.value node == Node.value returnType
 
         TypeAnnotation.Record fields ->
-            case returnType of
+            case Node.value returnType of
                 TypeAnnotation.Record returnFields ->
-                    if List.length fields == List.length returnFields then
-                        List.map2
-                            (\(Node _ ( nameA, a )) (Node _ ( nameB, b )) ->
-                                \() ->
-                                    if nameA == nameB then
-                                        isTypeEqual a b
-
-                                    else
-                                        False
-                            )
-                            (sortFields fields)
-                            returnFields
-                            |> List.all (\fn -> fn ())
-
-                    else
-                        False
+                    areFieldsEqual fields returnFields
 
                 _ ->
                     False
 
-        _ ->
-            False
+        TypeAnnotation.GenericRecord (Node _ varA) fields ->
+            case Node.value returnType of
+                TypeAnnotation.GenericRecord (Node _ varB) returnFields ->
+                    varA == varB && areFieldsEqual (Node.value fields) (Node.value returnFields)
+
+                _ ->
+                    False
+
+        TypeAnnotation.GenericType _ ->
+            -- It's okay if the type variables are different
+            case Node.value returnType of
+                TypeAnnotation.GenericType _ ->
+                    True
+
+                _ ->
+                    False
+
+        TypeAnnotation.Unit ->
+            case Node.value returnType of
+                TypeAnnotation.Unit ->
+                    True
+
+                _ ->
+                    False
+
+        TypeAnnotation.Tupled nodesA ->
+            case Node.value returnType of
+                TypeAnnotation.Tupled nodesB ->
+                    List.map2 isTypeEqual nodesA nodesB
+                        |> List.all identity
+
+                _ ->
+                    False
+
+        TypeAnnotation.FunctionTypeAnnotation inputA outputA ->
+            -- It's okay if the type variables are different
+            case Node.value returnType of
+                TypeAnnotation.FunctionTypeAnnotation inputB outputB ->
+                    isTypeEqual inputA inputB
+                        && isTypeEqual outputA outputB
+
+                _ ->
+                    False
+
+
+areFieldsEqual : List (Node RecordField) -> List (Node RecordField) -> Bool
+areFieldsEqual fieldsA fieldsB =
+    if List.length fieldsA == List.length fieldsB then
+        List.map2
+            (\(Node _ ( nameA, a )) (Node _ ( nameB, b )) ->
+                \() ->
+                    if nameA == nameB then
+                        isTypeEqual a b
+
+                    else
+                        False
+            )
+            (sortFields fieldsA)
+            (sortFields fieldsB)
+            |> List.all (\fn -> fn ())
+
+    else
+        False
 
 
 {-| Returned arguments are in the opposite order.
@@ -423,13 +469,9 @@ getArguments type_ lookupTable argsAcc =
                 _ ->
                     Nothing
 
-        TypeAnnotation.Record fields ->
+        TypeAnnotation.Record _ ->
             Just
-                { returnType =
-                    fields
-                        |> sortFields
-                        |> TypeAnnotation.Record
-                        |> Node (Node.range type_)
+                { returnType = type_
                 , arguments = argsAcc
                 }
 
