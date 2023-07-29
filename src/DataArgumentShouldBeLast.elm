@@ -413,11 +413,10 @@ isTypeEqual lookupTable node returnType =
                 _ ->
                     False
 
-        TypeAnnotation.GenericType _ ->
-            -- It's okay if the type variables are different
+        TypeAnnotation.GenericType a ->
             case Node.value returnType of
-                TypeAnnotation.GenericType _ ->
-                    True
+                TypeAnnotation.GenericType b ->
+                    a == b
 
                 _ ->
                     False
