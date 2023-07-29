@@ -350,11 +350,11 @@ isNotDataLast type_ lookupTable =
         Just { returnType, arguments } ->
             case arguments of
                 firstArg :: rest ->
-                    if isTypeEqual lookupTable firstArg returnType then
+                    if isTypeEqual lookupTable True firstArg returnType then
                         Nothing
 
                     else
-                        case findAndGiveElementAndItsPrevious (\arg -> isTypeEqual lookupTable arg returnType) 0 firstArg rest of
+                        case findAndGiveElementAndItsPrevious (\arg -> isTypeEqual lookupTable True arg returnType) 0 firstArg rest of
                             Just ( arg, argIndex, nextElement ) ->
                                 Just
                                     { argPosition = Node.range arg
@@ -371,8 +371,8 @@ isNotDataLast type_ lookupTable =
                     Nothing
 
 
-isTypeEqual : ModuleNameLookupTable -> Node TypeAnnotation -> Node TypeAnnotation -> Bool
-isTypeEqual lookupTable node returnType =
+isTypeEqual : ModuleNameLookupTable -> Bool -> Node TypeAnnotation -> Node TypeAnnotation -> Bool
+isTypeEqual lookupTable isTopLevel node returnType =
     case Node.value node of
         TypeAnnotation.Typed (Node _ ( _, nameA )) _ ->
             case Node.value returnType of
@@ -432,7 +432,7 @@ isTypeEqual lookupTable node returnType =
         TypeAnnotation.Tupled nodesA ->
             case Node.value returnType of
                 TypeAnnotation.Tupled nodesB ->
-                    List.map2 (isTypeEqual lookupTable) nodesA nodesB
+                    List.map2 (isTypeEqual lookupTable False) nodesA nodesB
                         |> List.all identity
 
                 _ ->
@@ -442,8 +442,8 @@ isTypeEqual lookupTable node returnType =
             -- It's okay if the type variables are different
             case Node.value returnType of
                 TypeAnnotation.FunctionTypeAnnotation inputB outputB ->
-                    isTypeEqual lookupTable inputA inputB
-                        && isTypeEqual lookupTable outputA outputB
+                    isTypeEqual lookupTable False inputA inputB
+                        && isTypeEqual lookupTable False outputA outputB
 
                 _ ->
                     False
@@ -456,7 +456,7 @@ areFieldsEqual lookupTable fieldsA fieldsB =
             (\(Node _ ( nameA, a )) (Node _ ( nameB, b )) ->
                 \() ->
                     if Node.value nameA == Node.value nameB then
-                        isTypeEqual lookupTable a b
+                        isTypeEqual lookupTable False a b
 
                     else
                         False
