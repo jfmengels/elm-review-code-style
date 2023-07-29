@@ -206,17 +206,31 @@ update model msg =
 """
                     |> Review.Test.run rule
                     |> Review.Test.expectNoErrors
-        , -- TODO We should check whether we can/should report this
-          test "should not report an error when the type variables are different for the argument and the return type" <|
+        , test "should report an error when the type variables are different for the argument and the return type" <|
             \() ->
                 """module A exposing (main)
-type X a = X a
+type X x = X x
 map : X a -> (a -> b) -> X b
 map (X x) fn =
     X (fn x)
 """
                     |> Review.Test.run rule
-                    |> Review.Test.expectNoErrors
+                    |> Review.Test.expectErrors
+                        [ Review.Test.error
+                            { message = "The data argument should be last"
+                            , details =
+                                [ "In Elm, it is common in functions that return the same type as one of the arguments to have that argument be the last. This makes it for instance easy to compose operations using `|>` or `>>`."
+                                , "Example: instead of `update : Model -> Msg -> Model`, it is more idiomatic to have `update : Msg -> Model -> Model`"
+                                ]
+                            , under = "X a"
+                            }
+                            |> Review.Test.whenFixed """module A exposing (main)
+type X x = X x
+map : (a -> b) -> X a -> X b
+map fn (X x) =
+    X (fn x)
+"""
+                        ]
         , test "should report an error when the data type is a record" <|
             \() ->
                 """module A exposing (main)
