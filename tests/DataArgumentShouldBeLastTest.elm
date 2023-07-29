@@ -254,4 +254,13 @@ fn str data =
     data
 """
                         ]
+        , test "should not report an error when the data type is a record but different in args" <|
+            \() ->
+                """module A exposing (main)
+fn : { b : Int, a : String } -> String -> { a : Int, b : Int }
+fn data str =
+    data
+"""
+                    |> Review.Test.run rule
+                    |> Review.Test.expectNoErrors
         ]
