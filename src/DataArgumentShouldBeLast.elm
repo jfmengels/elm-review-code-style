@@ -166,32 +166,42 @@ declarationVisitor node context =
                 Just (Node _ type_) ->
                     case isNotDataLast type_.typeAnnotation context.lookupTable of
                         Just { argPosition, argIndex, nextArgumentRange, nbOfArguments, returnType } ->
-                            ( []
-                            , { context
-                                | errors =
-                                    Dict.insert
-                                        (Node.value (Node.value declaration).name)
-                                        { range = argPosition
-                                        , nbOfArguments = nbOfArguments
-                                        , indexOfMovedArgument = argIndex
-                                        , fixes =
-                                            if context.isExposed (Node.value (Node.value declaration).name) then
-                                                []
+                            let
+                                fixes : List Fix
+                                fixes =
+                                    if context.isExposed (Node.value (Node.value declaration).name) then
+                                        []
 
-                                            else
-                                                createFix
-                                                    context
-                                                    nbOfArguments
-                                                    argPosition
-                                                    argIndex
-                                                    nextArgumentRange
-                                                    returnType
-                                                    (Node.range (Node.value declaration).name).end
-                                                    (Node.value declaration).arguments
-                                        }
-                                        context.errors
-                              }
-                            )
+                                    else
+                                        createFix
+                                            context
+                                            nbOfArguments
+                                            argPosition
+                                            argIndex
+                                            nextArgumentRange
+                                            returnType
+                                            (Node.range (Node.value declaration).name).end
+                                            (Node.value declaration).arguments
+                            in
+                            if List.isEmpty fixes then
+                                ( [ createError { range = argPosition, fixes = [] } ]
+                                , context
+                                )
+
+                            else
+                                ( []
+                                , { context
+                                    | errors =
+                                        Dict.insert
+                                            (Node.value (Node.value declaration).name)
+                                            { range = argPosition
+                                            , nbOfArguments = nbOfArguments
+                                            , indexOfMovedArgument = argIndex
+                                            , fixes = fixes
+                                            }
+                                            context.errors
+                                  }
+                                )
 
                         Nothing ->
                             ( [], context )

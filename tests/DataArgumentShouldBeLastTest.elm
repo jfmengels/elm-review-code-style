@@ -159,6 +159,8 @@ update :
     -> Model
 update model msg =
     model
+
+value = update Msg Model
 """
                     |> Review.Test.run rule
                     |> Review.Test.expectErrors
