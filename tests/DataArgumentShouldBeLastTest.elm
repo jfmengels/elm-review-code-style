@@ -220,7 +220,7 @@ map (X x) fn =
         , test "should report an error when the data type is a record" <|
             \() ->
                 """module A exposing (main)
-fn : { a : Int } -> String -> { a : Int }
+fn : { b : Int, a : Int } -> String -> { a : Int, b : Int }
 fn data str =
     data
 """
@@ -232,11 +232,10 @@ fn data str =
                                 [ "In Elm, it is common in functions that return the same type as one of the arguments to have that argument be the last. This makes it for instance easy to compose operations using `|>` or `>>`."
                                 , "Example: instead of `update : Model -> Msg -> Model`, it is more idiomatic to have `update : Msg -> Model -> Model`"
                                 ]
-                            , under = "{ a : Int }"
+                            , under = "{ a : Int, b : Int }"
                             }
-                            |> Review.Test.atExactly { start = { row = 2, column = 6 }, end = { row = 2, column = 17 } }
                             |> Review.Test.whenFixed """module A exposing (main)
-fn : String -> { a : Int } -> { a : Int }
+fn : String -> { b : Int, a : Int } -> { a : Int, b : Int }
 fn str data =
     data
 """
