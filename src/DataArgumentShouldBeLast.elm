@@ -372,8 +372,36 @@ isNotDataLast type_ lookupTable =
 
 
 isTypeEqual : Node TypeAnnotation -> Node TypeAnnotation -> Bool
-isTypeEqual (Node _ a) (Node _ b) =
-    a == b
+isTypeEqual node (Node _ returnType) =
+    case Node.value node of
+        TypeAnnotation.Typed _ _ ->
+            Node.value node == returnType
+
+        TypeAnnotation.Record fields ->
+            case returnType of
+                TypeAnnotation.Record returnFields ->
+                    if List.length fields == List.length returnFields then
+                        List.map2
+                            (\(Node _ ( nameA, a )) (Node _ ( nameB, b )) ->
+                                \() ->
+                                    if nameA == nameB then
+                                        isTypeEqual a b
+
+                                    else
+                                        False
+                            )
+                            (sortFields fields)
+                            returnFields
+                            |> List.all (\fn -> fn ())
+
+                    else
+                        False
+
+                _ ->
+                    False
+
+        _ ->
+            False
 
 
 {-| Returned arguments are in the opposite order.
@@ -399,6 +427,7 @@ getArguments type_ lookupTable argsAcc =
             Just
                 { returnType =
                     fields
+                        |> sortFields
                         |> TypeAnnotation.Record
                         |> Node (Node.range type_)
                 , arguments = argsAcc
@@ -406,6 +435,11 @@ getArguments type_ lookupTable argsAcc =
 
         _ ->
             Nothing
+
+
+sortFields : List (Node ( Node comparable, b )) -> List (Node ( Node comparable, b ))
+sortFields fields =
+    List.sortBy (\(Node _ ( Node _ fieldName, _ )) -> fieldName) fields
 
 
 removeRange : Node TypeAnnotation -> Node TypeAnnotation
