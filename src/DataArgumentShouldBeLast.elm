@@ -354,7 +354,7 @@ isNotDataLast type_ lookupTable =
                         Nothing
 
                     else
-                        case findAndGiveElementAndItsPrevious (\arg -> Node.value arg == Node.value returnType) 0 firstArg rest of
+                        case findAndGiveElementAndItsPrevious (\arg -> isTypeEqual arg returnType) 0 firstArg rest of
                             Just ( arg, argIndex, nextElement ) ->
                                 Just
                                     { argPosition = Node.range arg
