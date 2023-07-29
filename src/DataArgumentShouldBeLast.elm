@@ -476,13 +476,13 @@ getArguments : Node TypeAnnotation -> ModuleNameLookupTable -> List (Node TypeAn
 getArguments type_ lookupTable argsAcc =
     case Node.value type_ of
         TypeAnnotation.FunctionTypeAnnotation arg return ->
-            getArguments return lookupTable ((Node (Node.range arg) <| Node.value <| removeRange arg) :: argsAcc)
+            getArguments return lookupTable (arg :: argsAcc)
 
         TypeAnnotation.Typed _ _ ->
             case ModuleNameLookupTable.moduleNameFor lookupTable type_ of
                 Just [] ->
                     Just
-                        { returnType = Node (Node.range type_) <| Node.value <| removeRange type_
+                        { returnType = type_
                         , arguments = argsAcc
                         }
 
@@ -502,36 +502,6 @@ getArguments type_ lookupTable argsAcc =
 sortFields : List (Node ( Node comparable, b )) -> List (Node ( Node comparable, b ))
 sortFields fields =
     List.sortBy (\(Node _ ( Node _ fieldName, _ )) -> fieldName) fields
-
-
-removeRange : Node TypeAnnotation -> Node TypeAnnotation
-removeRange node =
-    case Node.value node of
-        TypeAnnotation.GenericType string ->
-            Node Range.emptyRange (TypeAnnotation.GenericType string)
-
-        TypeAnnotation.Typed (Node _ qualifier) nodes ->
-            Node Range.emptyRange (TypeAnnotation.Typed (Node Range.emptyRange qualifier) (List.map removeRange nodes))
-
-        TypeAnnotation.Unit ->
-            node
-
-        TypeAnnotation.Tupled nodes ->
-            Node Range.emptyRange (TypeAnnotation.Tupled (List.map removeRange nodes))
-
-        TypeAnnotation.Record recordDefinition ->
-            Node Range.emptyRange (TypeAnnotation.Record (List.map removeRangeFromRecordField recordDefinition))
-
-        TypeAnnotation.GenericRecord (Node _ var) (Node _ recordDefinition) ->
-            Node Range.emptyRange (TypeAnnotation.GenericRecord (Node Range.emptyRange var) (Node Range.emptyRange (List.map removeRangeFromRecordField recordDefinition)))
-
-        TypeAnnotation.FunctionTypeAnnotation input output ->
-            Node Range.emptyRange (TypeAnnotation.FunctionTypeAnnotation (removeRange input) (removeRange output))
-
-
-removeRangeFromRecordField : Node RecordField -> Node RecordField
-removeRangeFromRecordField (Node _ ( Node _ property, value )) =
-    Node Range.emptyRange ( Node Range.emptyRange property, removeRange value )
 
 
 findAndGiveElementAndItsPrevious : (a -> Bool) -> Int -> a -> List a -> Maybe ( a, Int, a )
