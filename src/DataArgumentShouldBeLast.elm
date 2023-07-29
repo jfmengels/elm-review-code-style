@@ -350,11 +350,11 @@ isNotDataLast type_ lookupTable =
         Just { returnType, arguments } ->
             case arguments of
                 firstArg :: rest ->
-                    if isTypeEqual firstArg returnType then
+                    if isTypeEqual lookupTable firstArg returnType then
                         Nothing
 
                     else
-                        case findAndGiveElementAndItsPrevious (\arg -> isTypeEqual arg returnType) 0 firstArg rest of
+                        case findAndGiveElementAndItsPrevious (\arg -> isTypeEqual lookupTable arg returnType) 0 firstArg rest of
                             Just ( arg, argIndex, nextElement ) ->
                                 Just
                                     { argPosition = Node.range arg
@@ -371,8 +371,8 @@ isNotDataLast type_ lookupTable =
                     Nothing
 
 
-isTypeEqual : Node TypeAnnotation -> Node TypeAnnotation -> Bool
-isTypeEqual node returnType =
+isTypeEqual : ModuleNameLookupTable -> Node TypeAnnotation -> Node TypeAnnotation -> Bool
+isTypeEqual lookupTable node returnType =
     case Node.value node of
         TypeAnnotation.Typed _ _ ->
             Node.value node == Node.value returnType
@@ -380,7 +380,7 @@ isTypeEqual node returnType =
         TypeAnnotation.Record fields ->
             case Node.value returnType of
                 TypeAnnotation.Record returnFields ->
-                    areFieldsEqual fields returnFields
+                    areFieldsEqual lookupTable fields returnFields
 
                 _ ->
                     False
@@ -388,7 +388,7 @@ isTypeEqual node returnType =
         TypeAnnotation.GenericRecord (Node _ varA) fields ->
             case Node.value returnType of
                 TypeAnnotation.GenericRecord (Node _ varB) returnFields ->
-                    varA == varB && areFieldsEqual (Node.value fields) (Node.value returnFields)
+                    varA == varB && areFieldsEqual lookupTable (Node.value fields) (Node.value returnFields)
 
                 _ ->
                     False
@@ -413,7 +413,7 @@ isTypeEqual node returnType =
         TypeAnnotation.Tupled nodesA ->
             case Node.value returnType of
                 TypeAnnotation.Tupled nodesB ->
-                    List.map2 isTypeEqual nodesA nodesB
+                    List.map2 (isTypeEqual lookupTable) nodesA nodesB
                         |> List.all identity
 
                 _ ->
@@ -423,21 +423,21 @@ isTypeEqual node returnType =
             -- It's okay if the type variables are different
             case Node.value returnType of
                 TypeAnnotation.FunctionTypeAnnotation inputB outputB ->
-                    isTypeEqual inputA inputB
-                        && isTypeEqual outputA outputB
+                    isTypeEqual lookupTable inputA inputB
+                        && isTypeEqual lookupTable outputA outputB
 
                 _ ->
                     False
 
 
-areFieldsEqual : List (Node RecordField) -> List (Node RecordField) -> Bool
-areFieldsEqual fieldsA fieldsB =
+areFieldsEqual : ModuleNameLookupTable -> List (Node RecordField) -> List (Node RecordField) -> Bool
+areFieldsEqual lookupTable fieldsA fieldsB =
     if List.length fieldsA == List.length fieldsB then
         List.map2
             (\(Node _ ( nameA, a )) (Node _ ( nameB, b )) ->
                 \() ->
                     if nameA == nameB then
-                        isTypeEqual a b
+                        isTypeEqual lookupTable a b
 
                     else
                         False
