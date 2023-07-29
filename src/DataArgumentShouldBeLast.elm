@@ -374,8 +374,28 @@ isNotDataLast type_ lookupTable =
 isTypeEqual : ModuleNameLookupTable -> Node TypeAnnotation -> Node TypeAnnotation -> Bool
 isTypeEqual lookupTable node returnType =
     case Node.value node of
-        TypeAnnotation.Typed _ _ ->
-            Node.value node == Node.value returnType
+        TypeAnnotation.Typed (Node _ ( _, nameA )) _ ->
+            case Node.value returnType of
+                TypeAnnotation.Typed (Node _ ( _, nameB )) _ ->
+                    if nameA /= nameB then
+                        False
+
+                    else
+                        case ModuleNameLookupTable.moduleNameFor lookupTable node of
+                            Just moduleNameA ->
+                                case ModuleNameLookupTable.moduleNameFor lookupTable returnType of
+                                    Just moduleNameB ->
+                                        -- It's okay if the type variables are different
+                                        moduleNameA == moduleNameB
+
+                                    Nothing ->
+                                        False
+
+                            _ ->
+                                False
+
+                _ ->
+                    False
 
         TypeAnnotation.Record fields ->
             case Node.value returnType of
