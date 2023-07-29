@@ -350,7 +350,7 @@ isNotDataLast type_ lookupTable =
         Just { returnType, arguments } ->
             case arguments of
                 firstArg :: rest ->
-                    if Node.value firstArg == Node.value returnType then
+                    if isTypeEqual firstArg returnType then
                         Nothing
 
                     else
@@ -369,6 +369,11 @@ isNotDataLast type_ lookupTable =
 
                 [] ->
                     Nothing
+
+
+isTypeEqual : Node TypeAnnotation -> Node TypeAnnotation -> Bool
+isTypeEqual (Node _ a) (Node _ b) =
+    a == b
 
 
 {-| Returned arguments are in the opposite order.
