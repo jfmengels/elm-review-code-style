@@ -374,9 +374,9 @@ isNotDataLast type_ lookupTable =
 isTypeEqual : ModuleNameLookupTable -> Bool -> Node TypeAnnotation -> Node TypeAnnotation -> Bool
 isTypeEqual lookupTable isTopLevel node returnType =
     case Node.value node of
-        TypeAnnotation.Typed (Node _ ( _, nameA )) _ ->
+        TypeAnnotation.Typed (Node _ ( _, nameA )) nodesA ->
             case Node.value returnType of
-                TypeAnnotation.Typed (Node _ ( _, nameB )) _ ->
+                TypeAnnotation.Typed (Node _ ( _, nameB )) nodesB ->
                     if nameA /= nameB then
                         False
 
@@ -385,8 +385,17 @@ isTypeEqual lookupTable isTopLevel node returnType =
                             Just moduleNameA ->
                                 case ModuleNameLookupTable.moduleNameFor lookupTable returnType of
                                     Just moduleNameB ->
-                                        -- It's okay if the type variables are different
-                                        moduleNameA == moduleNameB
+                                        if moduleNameA == moduleNameB then
+                                            if isTopLevel then
+                                                True
+                                                -- It's okay if the type variables are different at the top-level
+
+                                            else
+                                                List.map2 (isTypeEqual lookupTable False) nodesA nodesB
+                                                    |> List.all identity
+
+                                        else
+                                            False
 
                                     Nothing ->
                                         False
