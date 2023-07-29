@@ -456,7 +456,7 @@ areFieldsEqual lookupTable fieldsA fieldsB =
         List.map2
             (\(Node _ ( nameA, a )) (Node _ ( nameB, b )) ->
                 \() ->
-                    if nameA == nameB then
+                    if Node.value nameA == Node.value nameB then
                         isTypeEqual lookupTable a b
 
                     else
