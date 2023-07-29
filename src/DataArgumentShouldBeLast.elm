@@ -395,9 +395,9 @@ getArguments type_ lookupTable argsAcc =
                 _ ->
                     Nothing
 
-        TypeAnnotation.Record _ ->
+        TypeAnnotation.Record fields ->
             Just
-                { returnType = Node (Node.range type_) <| Node.value <| removeRange type_
+                { returnType = Node (Node.range type_) (TypeAnnotation.Record fields)
                 , arguments = argsAcc
                 }
 
