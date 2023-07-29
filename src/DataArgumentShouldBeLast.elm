@@ -13,7 +13,7 @@ import Elm.Syntax.Expression as Expression exposing (Expression)
 import Elm.Syntax.Module as Module
 import Elm.Syntax.Node as Node exposing (Node(..))
 import Elm.Syntax.Pattern exposing (Pattern)
-import Elm.Syntax.Range as Range exposing (Location, Range)
+import Elm.Syntax.Range exposing (Location, Range)
 import Elm.Syntax.TypeAnnotation as TypeAnnotation exposing (RecordField, TypeAnnotation)
 import Review.Fix as Fix exposing (Fix)
 import Review.ModuleNameLookupTable as ModuleNameLookupTable exposing (ModuleNameLookupTable)
