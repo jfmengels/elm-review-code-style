@@ -364,7 +364,7 @@ isNotDataLast type_ lookupTable =
                         Nothing
 
                     else
-                        case findAndGiveElementAndItsPrevious (\arg -> isTypeEqual lookupTable True arg returnType) 0 firstArg rest of
+                        case findAndGiveElementAndItsPrevious (\arg -> isTypeEqual lookupTable True arg returnType) (List.length rest - 1) firstArg rest of
                             Just ( arg, argIndex, nextElement ) ->
                                 Just
                                     { argPosition = Node.range arg
@@ -533,7 +533,7 @@ findAndGiveElementAndItsPrevious predicate index previous list =
                 Just ( x, index, previous )
 
             else
-                findAndGiveElementAndItsPrevious predicate (index + 1) x xs
+                findAndGiveElementAndItsPrevious predicate (index - 1) x xs
 
 
 listAtIndex : Int -> List (Node a) -> Location -> Maybe Range
