@@ -124,6 +124,32 @@ value2 =
         msg model
 """
                         ]
+        , test "should report an error when the return type is present in the arguments but not as the last one (more than 2 arguments)" <|
+            \() ->
+                """module A exposing (main)
+type X = X
+setChapterProgress : String -> X -> Int -> X
+setChapterProgress string x int =
+    X
+"""
+                    |> Review.Test.run rule
+                    |> Review.Test.expectErrors
+                        [ Review.Test.error
+                            { message = "The data argument should be last"
+                            , details =
+                                [ "In Elm, it is common in functions that return the same type as one of the arguments to have that argument be the last. This makes it for instance easy to compose operations using `|>` or `>>`."
+                                , "Example: instead of `update : Model -> Msg -> Model`, it is more idiomatic to have `update : Msg -> Model -> Model`"
+                                ]
+                            , under = "X"
+                            }
+                            |> Review.Test.atExactly { start = { row = 3, column = 32 }, end = { row = 3, column = 33 } }
+                            |> Review.Test.whenFixed """module A exposing (main)
+type X = X
+setChapterProgress : String -> Int -> X -> X
+setChapterProgress string int x =
+    X
+"""
+                        ]
         , test "should not expect a fix if not all arguments are in the declaration" <|
             \() ->
                 """module A exposing (main)
