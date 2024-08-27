@@ -6,6 +6,10 @@ module NoRedundantlyQualifiedType exposing (rule)
 
 -}
 
+import Elm.Syntax.Declaration as Declaration exposing (Declaration)
+import Elm.Syntax.Expression as Expression exposing (Expression, LetBlock, LetDeclaration)
+import Elm.Syntax.Node as Node exposing (Node)
+import Review.ModuleNameLookupTable as ModuleNameLookupTable exposing (ModuleNameLookupTable)
 import Review.Rule as Rule exposing (Rule)
 
 
@@ -58,6 +62,34 @@ elm-review --template jfmengels/elm-review-code-style/example --rules NoRedundan
 -}
 rule : Rule
 rule =
-    Rule.newModuleRuleSchema "NoRedundantlyQualifiedType" ()
-        -- Add your visitors
+    Rule.newModuleRuleSchemaUsingContextCreator "NoRedundantlyQualifiedType" initialContext
+        |> Rule.withDeclarationEnterVisitor declarationVisitor
+        |> Rule.withLetDeclarationEnterVisitor letDeclarationEnterVisitor
+        |> Rule.withFinalModuleEvaluation finalEvaluation
         |> Rule.fromModuleRuleSchema
+
+
+type alias Context =
+    { lookupTable : ModuleNameLookupTable }
+
+
+initialContext : Rule.ContextCreator () Context
+initialContext =
+    Rule.initContextCreator
+        (\lookupTable () -> { lookupTable = lookupTable })
+        |> Rule.withModuleNameLookupTable
+
+
+declarationVisitor : Node Declaration -> Context -> ( List (Rule.Error {}), Context )
+declarationVisitor node context =
+    Debug.todo "declarationVisitor"
+
+
+letDeclarationEnterVisitor : Node Expression.LetBlock -> Node Expression.LetDeclaration -> Context -> ( List (Rule.Error {}), Context )
+letDeclarationEnterVisitor _ letDeclaration context =
+    Debug.todo "declarationVisitor"
+
+
+finalEvaluation : Context -> List (Rule.Error {})
+finalEvaluation context =
+    Debug.todo "declarationVisitor"
