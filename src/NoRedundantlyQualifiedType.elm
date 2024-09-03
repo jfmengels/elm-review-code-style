@@ -124,27 +124,23 @@ declarationVisitor : Node Declaration -> Context -> ( List (Rule.Error {}), Cont
 declarationVisitor node context =
     case Node.value node of
         FunctionDeclaration function ->
-            doFunction function context
+            ( doFunction context function, context )
 
         AliasDeclaration typeAlias ->
-            doTypeAnnotation typeAlias.typeAnnotation context
+            ( doTypeAnnotation context typeAlias.typeAnnotation, context )
 
         CustomTypeDeclaration type_ ->
-            type_.constructors
-                |> List.foldl
-                    (\constructor acc ->
-                        (Node.value constructor).arguments
-                            |> List.foldl
-                                (\arg ( accErrors, accContext ) ->
-                                    doTypeAnnotation arg accContext
-                                        |> Tuple.mapFirst (\newErrors -> accErrors ++ newErrors)
-                                )
-                                acc
+            ( type_.constructors
+                |> List.concatMap
+                    (Node.value
+                        >> .arguments
+                        >> List.concatMap (doTypeAnnotation context)
                     )
-                    ( [], context )
+            , context
+            )
 
         PortDeclaration signature ->
-            doTypeAnnotation signature.typeAnnotation context
+            ( doTypeAnnotation context signature.typeAnnotation, context )
 
         InfixDeclaration _ ->
             ( [], context )
@@ -157,27 +153,27 @@ letDeclarationEnterVisitor : Node Expression.LetBlock -> Node Expression.LetDecl
 letDeclarationEnterVisitor _ letDeclaration context =
     case Node.value letDeclaration of
         LetFunction function ->
-            doFunction function context
+            ( doFunction context function, context )
 
         LetDestructuring _ _ ->
             ( [], context )
 
 
-doFunction : Function -> Context -> ( List (Rule.Error {}), Context )
-doFunction function context =
+doFunction : Context -> Function -> List (Rule.Error {})
+doFunction context function =
     case function.signature of
         Just (Node _ signature) ->
-            doTypeAnnotation signature.typeAnnotation context
+            doTypeAnnotation context signature.typeAnnotation
 
         Nothing ->
-            ( [], context )
+            []
 
 
-doTypeAnnotation : Node TypeAnnotation -> Context -> ( List (Rule.Error {}), Context )
-doTypeAnnotation typeAnnotation context =
+doTypeAnnotation : Context -> Node TypeAnnotation -> List (Rule.Error {})
+doTypeAnnotation context typeAnnotation =
     case Node.value typeAnnotation of
         GenericType _ ->
-            ( [], context )
+            []
 
         Typed constructor arguments ->
             let
@@ -308,25 +304,13 @@ doTypeAnnotation typeAnnotation context =
                         _ ->
                             []
             in
-            arguments
-                |> List.foldl
-                    (\arg ( accErrors, accContext ) ->
-                        doTypeAnnotation arg accContext
-                            |> Tuple.mapFirst (\newErrors -> accErrors ++ newErrors)
-                    )
-                    ( errors, context )
+            errors ++ (arguments |> List.concatMap (doTypeAnnotation context))
 
         Unit ->
-            ( [], context )
+            []
 
         Tupled arguments ->
-            arguments
-                |> List.foldl
-                    (\arg ( accErrors, accContext ) ->
-                        doTypeAnnotation arg accContext
-                            |> Tuple.mapFirst (\newErrors -> accErrors ++ newErrors)
-                    )
-                    ( [], context )
+            arguments |> List.concatMap (doTypeAnnotation context)
 
         Record recordDefinition ->
             doRecordDefinition recordDefinition context
@@ -335,23 +319,16 @@ doTypeAnnotation typeAnnotation context =
             doRecordDefinition recordDefinition context
 
         FunctionTypeAnnotation left right ->
-            let
-                ( newErrors, newContext ) =
-                    doTypeAnnotation left context
-            in
-            doTypeAnnotation right newContext
-                |> Tuple.mapFirst (\rightErrors -> newErrors ++ rightErrors)
+            doTypeAnnotation context left ++ doTypeAnnotation context right
 
 
-doRecordDefinition : List (Node RecordField) -> Context -> ( List (Rule.Error {}), Context )
+doRecordDefinition : List (Node RecordField) -> Context -> List (Rule.Error {})
 doRecordDefinition recordDefinition context =
     recordDefinition
-        |> List.foldl
-            (\(Node _ ( _, typeAnnotation_ )) ( accErrors, accContext ) ->
-                doTypeAnnotation typeAnnotation_ accContext
-                    |> Tuple.mapFirst (\newErrors -> accErrors ++ newErrors)
+        |> List.concatMap
+            (\(Node _ ( _, typeAnnotation )) ->
+                doTypeAnnotation context typeAnnotation
             )
-            ( [], context )
 
 
 partition : (a -> Bool) -> List a -> ( List a, List a )
