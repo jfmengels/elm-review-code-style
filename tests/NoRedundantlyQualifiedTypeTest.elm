@@ -50,9 +50,8 @@ a = ""
                             , under = "String.String"
                             }
                             |> Review.Test.whenFixed """module A exposing (..)
-import Set exposing (Set)
-a : Set a
-a = Set.empty
+a : String
+a = ""
 """
                         ]
         , test "should expose the type" <|
@@ -180,7 +179,7 @@ a = Set.empty
         , test "should report an error if only the correct import exposes everything" <|
             \() ->
                 """module A exposing (..)
-import Set (..)
+import Set exposing (..)
 import OtherSet
 a : Set.Set a
 a = Set.empty
@@ -421,7 +420,7 @@ a = empty
                                 |> Review.Test.whenFixed """module A exposing (..)
 import Set
 import Set exposing (Set, empty)
-a : Set.Set a
+a : Set a
 a = empty
 """
                             ]
@@ -443,7 +442,7 @@ a = Set.empty
                                 |> Review.Test.whenFixed """module A exposing (..)
 import Set exposing (Set)
 import Set
-a : Set.Set a
+a : Set a
 a = Set.empty
 """
                             ]
