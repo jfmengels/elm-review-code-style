@@ -5,10 +5,12 @@ import Review.Test
 import Test exposing (Test, describe, test)
 
 
+message : String -> String
 message name =
     "This type can be simplified to just `" ++ name ++ "`."
 
 
+details : String -> List String
 details name =
     [ "It can be considered a bit silly to say the same word twice like in `" ++ name ++ "." ++ name ++ "`. This rule simplifies to just `" ++ name ++ "`. This follows the convention of centering modules around a type." ]
 
