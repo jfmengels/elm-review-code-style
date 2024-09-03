@@ -209,10 +209,7 @@ doConstructor : Context -> Node ( ModuleName, String ) -> List (Rule.Error {})
 doConstructor context constructor =
     case constructor of
         Node range ( [ qualifier ], name ) ->
-            if qualifier /= name then
-                []
-
-            else if Set.member name context.typesDefinedInModule then
+            if qualifier /= name || Set.member name context.typesDefinedInModule then
                 []
 
             else
