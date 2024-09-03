@@ -7,14 +7,13 @@ module NoRedundantlyQualifiedType exposing (rule)
 -}
 
 import Elm.Syntax.Declaration exposing (Declaration(..))
-import Elm.Syntax.Exposing as Exposing exposing (Exposing)
-import Elm.Syntax.Expression as Expression exposing (Expression, Function, LetBlock, LetDeclaration(..))
+import Elm.Syntax.Exposing as Exposing
+import Elm.Syntax.Expression as Expression exposing (Function, LetDeclaration(..))
 import Elm.Syntax.Import exposing (Import)
 import Elm.Syntax.ModuleName exposing (ModuleName)
 import Elm.Syntax.Node as Node exposing (Node(..))
-import Elm.Syntax.Range exposing (Range)
 import Elm.Syntax.TypeAnnotation exposing (RecordField, TypeAnnotation(..))
-import Review.Fix as Fix
+import Review.Fix as Fix exposing (Fix)
 import Review.ModuleNameLookupTable as ModuleNameLookupTable exposing (ModuleNameLookupTable)
 import Review.Rule as Rule exposing (Rule)
 import Set exposing (Set)
@@ -225,6 +224,7 @@ doConstructor context constructor =
 
                         else
                             let
+                                importFix : List Fix
                                 importFix =
                                     if exposes name matchingImports then
                                         []
