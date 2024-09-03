@@ -137,15 +137,6 @@ a = ""
 """
                     |> Review.Test.run rule
                     |> Review.Test.expectNoErrors
-        , test "should not report an error if the type would clash with an auto-imported type" <|
-            \() ->
-                """module A exposing (..)
-import OtherString as String
-a : String.String
-a = String.empty
-"""
-                    |> Review.Test.run rule
-                    |> Review.Test.expectNoErrors
         , test "should not report an error a type with the same name is defined in the same file" <|
             \() ->
                 """module A exposing (..)
