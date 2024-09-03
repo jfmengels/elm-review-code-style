@@ -223,26 +223,6 @@ doConstructor context constructor =
                             []
 
                         else
-                            let
-                                importFix : List Fix
-                                importFix =
-                                    if exposes name matchingImports then
-                                        []
-
-                                    else
-                                        case firstExposed matchingImports of
-                                            Just existingExposing ->
-                                                [ Fix.insertAt (Node.range existingExposing).start (name ++ ", ") ]
-
-                                            Nothing ->
-                                                case matchingImports of
-                                                    -- If no matching imports, assume it is part of the default imports.
-                                                    [] ->
-                                                        []
-
-                                                    firstImport :: _ ->
-                                                        [ Fix.insertAt (Node.range firstImport).end (" exposing (" ++ name ++ ")") ]
-                            in
                             [ Rule.errorWithFix
                                 { message = "This type can be simplified to just `" ++ name ++ "`."
                                 , details = [ "It can be considered a bit silly to say the same word twice like in `" ++ name ++ "." ++ name ++ "`. This rule simplifies to just `" ++ name ++ "`. This follows the convention of centering modules around a type." ]
@@ -257,7 +237,7 @@ doConstructor context constructor =
                                         , column = range.start.column + String.length name + 1
                                         }
                                     }
-                                    :: importFix
+                                    :: importFix name matchingImports
                                 )
                             ]
 
@@ -314,6 +294,26 @@ firstExposed =
                     Nothing
         )
         >> List.head
+
+
+importFix : String -> List (Node Import) -> List Fix
+importFix name matchingImports =
+    if exposes name matchingImports then
+        []
+
+    else
+        case firstExposed matchingImports of
+            Just existingExposing ->
+                [ Fix.insertAt (Node.range existingExposing).start (name ++ ", ") ]
+
+            Nothing ->
+                case matchingImports of
+                    -- If no matching imports, assume it is part of the default imports.
+                    [] ->
+                        []
+
+                    firstImport :: _ ->
+                        [ Fix.insertAt (Node.range firstImport).end (" exposing (" ++ name ++ ")") ]
 
 
 partition : (a -> Bool) -> List a -> ( List a, List a )
