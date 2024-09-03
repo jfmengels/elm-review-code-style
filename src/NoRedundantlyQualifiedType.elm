@@ -11,7 +11,7 @@ import Elm.Syntax.Exposing as Exposing exposing (Exposing)
 import Elm.Syntax.Expression as Expression exposing (Expression, Function, LetBlock, LetDeclaration(..))
 import Elm.Syntax.Import exposing (Import)
 import Elm.Syntax.ModuleName exposing (ModuleName)
-import Elm.Syntax.Node as Node exposing (Node)
+import Elm.Syntax.Node as Node exposing (Node(..))
 import Elm.Syntax.Range exposing (Range)
 import Elm.Syntax.TypeAnnotation exposing (RecordField, TypeAnnotation(..))
 import Review.Fix as Fix
@@ -72,6 +72,7 @@ rule =
     Rule.newModuleRuleSchemaUsingContextCreator "NoRedundantlyQualifiedType" initialContext
         |> Rule.withDeclarationEnterVisitor declarationVisitor
         |> Rule.withLetDeclarationEnterVisitor letDeclarationEnterVisitor
+        |> Rule.providesFixesForModuleRule
         |> Rule.fromModuleRuleSchema
 
 
@@ -222,13 +223,13 @@ doConstructor context constructor =
                                 context.imports
                                     |> partition (\import_ -> Node.value (Node.value import_).moduleName == moduleName)
                         in
-                        if otherImportConflicts name otherImports then
+                        if exposes name otherImports then
                             []
 
                         else
                             let
                                 importFix =
-                                    if exposesAll matchingImports then
+                                    if exposes name matchingImports then
                                         []
 
                                     else
@@ -271,8 +272,8 @@ doConstructor context constructor =
             []
 
 
-otherImportConflicts : String -> List (Node Import) -> Bool
-otherImportConflicts name =
+exposes : String -> List (Node Import) -> Bool
+exposes name =
     List.any
         (\importNode ->
             case (Node.value importNode).exposingList of
@@ -298,19 +299,6 @@ otherImportConflicts name =
                                             Exposing.TypeExpose exposedType ->
                                                 exposedType.name == name
                                     )
-
-                _ ->
-                    False
-        )
-
-
-exposesAll : List (Node Import) -> Bool
-exposesAll =
-    List.any
-        (\importNode ->
-            case (Node.value importNode).exposingList of
-                Just (Node _ (Exposing.All _)) ->
-                    True
 
                 _ ->
                     False
