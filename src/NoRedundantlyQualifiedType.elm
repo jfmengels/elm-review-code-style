@@ -10,6 +10,7 @@ import Elm.Syntax.Declaration exposing (Declaration(..))
 import Elm.Syntax.Exposing as Exposing exposing (Exposing)
 import Elm.Syntax.Expression as Expression exposing (Expression, Function, LetBlock, LetDeclaration(..))
 import Elm.Syntax.Import exposing (Import)
+import Elm.Syntax.ModuleName exposing (ModuleName)
 import Elm.Syntax.Node as Node exposing (Node)
 import Elm.Syntax.Range exposing (Range)
 import Elm.Syntax.TypeAnnotation exposing (RecordField, TypeAnnotation(..))
@@ -176,135 +177,7 @@ doTypeAnnotation context typeAnnotation =
             []
 
         Typed constructor arguments ->
-            let
-                errors =
-                    case constructor of
-                        Node range ( [ qualifier ], name ) ->
-                            if qualifier == name then
-                                if Set.member name context.typesDefinedInModule then
-                                    []
-
-                                else
-                                    case ModuleNameLookupTable.moduleNameFor context.lookupTable constructor of
-                                        Just moduleName ->
-                                            let
-                                                ( matchingImports, otherImports ) =
-                                                    context.imports
-                                                        |> partition
-                                                            (\import_ ->
-                                                                Node.value (Node.value import_).moduleName == moduleName
-                                                            )
-
-                                                otherImportConflicts =
-                                                    otherImports
-                                                        |> List.any
-                                                            (\importNode ->
-                                                                case (Node.value importNode).exposingList of
-                                                                    Just (Node _ exposing_) ->
-                                                                        case exposing_ of
-                                                                            Exposing.All _ ->
-                                                                                True
-
-                                                                            Exposing.Explicit nodes ->
-                                                                                nodes
-                                                                                    |> List.any
-                                                                                        (\topLevelExposeNode ->
-                                                                                            case Node.value topLevelExposeNode of
-                                                                                                Exposing.FunctionExpose _ ->
-                                                                                                    False
-
-                                                                                                Exposing.InfixExpose _ ->
-                                                                                                    False
-
-                                                                                                Exposing.TypeOrAliasExpose exposedName ->
-                                                                                                    exposedName == name
-
-                                                                                                Exposing.TypeExpose exposedType ->
-                                                                                                    exposedType.name == name
-                                                                                        )
-
-                                                                    _ ->
-                                                                        False
-                                                            )
-                                            in
-                                            if otherImportConflicts then
-                                                []
-
-                                            else
-                                                let
-                                                    exposesAll =
-                                                        matchingImports
-                                                            |> List.any
-                                                                (\importNode ->
-                                                                    case (Node.value importNode).exposingList of
-                                                                        Just (Node _ (Exposing.All _)) ->
-                                                                            True
-
-                                                                        _ ->
-                                                                            False
-                                                                )
-
-                                                    importFix =
-                                                        if exposesAll then
-                                                            []
-
-                                                        else
-                                                            let
-                                                                maybeExistingExposing =
-                                                                    matchingImports
-                                                                        |> List.filterMap
-                                                                            (\importNode ->
-                                                                                case (Node.value importNode).exposingList of
-                                                                                    Just (Node _ (Exposing.Explicit (firstExposed :: _))) ->
-                                                                                        Just firstExposed
-
-                                                                                    _ ->
-                                                                                        Nothing
-                                                                            )
-                                                                        |> List.head
-                                                            in
-                                                            case maybeExistingExposing of
-                                                                Just existingExposing ->
-                                                                    [ Fix.insertAt (Node.range existingExposing).start (name ++ ", ") ]
-
-                                                                Nothing ->
-                                                                    case matchingImports of
-                                                                        -- If no matching imports, assume it is part of the default imports.
-                                                                        [] ->
-                                                                            []
-
-                                                                        firstImport :: _ ->
-                                                                            [ Fix.insertAt (Node.range firstImport).end (" exposing (" ++ name ++ ")") ]
-                                                in
-                                                [ Rule.errorWithFix
-                                                    { message = "This type can be simplified to just `" ++ name ++ "`."
-                                                    , details = [ "It can be considered a bit silly to say the same word twice like in `" ++ name ++ "." ++ name ++ "`. This rule simplifies to just `" ++ name ++ "`. This follows the convention of centering modules around a type." ]
-                                                    }
-                                                    range
-                                                    (Fix.removeRange
-                                                        { start = range.start
-                                                        , end =
-                                                            { row = range.start.row
-
-                                                            -- Add 1 to the column to remove the dot.
-                                                            , column = range.start.column + String.length name + 1
-                                                            }
-                                                        }
-                                                        :: importFix
-                                                    )
-                                                ]
-
-                                        -- Should not happen.
-                                        Nothing ->
-                                            []
-
-                            else
-                                []
-
-                        _ ->
-                            []
-            in
-            errors ++ (arguments |> List.concatMap (doTypeAnnotation context))
+            doConstructor context constructor ++ (arguments |> List.concatMap (doTypeAnnotation context))
 
         Unit ->
             []
@@ -329,6 +202,135 @@ doRecordDefinition recordDefinition context =
             (\(Node _ ( _, typeAnnotation )) ->
                 doTypeAnnotation context typeAnnotation
             )
+
+
+doConstructor : Context -> Node ( ModuleName, String ) -> List (Rule.Error {})
+doConstructor context constructor =
+    case constructor of
+        Node range ( [ qualifier ], name ) ->
+            if qualifier == name then
+                if Set.member name context.typesDefinedInModule then
+                    []
+
+                else
+                    case ModuleNameLookupTable.moduleNameFor context.lookupTable constructor of
+                        Just moduleName ->
+                            let
+                                ( matchingImports, otherImports ) =
+                                    context.imports
+                                        |> partition
+                                            (\import_ ->
+                                                Node.value (Node.value import_).moduleName == moduleName
+                                            )
+
+                                otherImportConflicts =
+                                    otherImports
+                                        |> List.any
+                                            (\importNode ->
+                                                case (Node.value importNode).exposingList of
+                                                    Just (Node _ exposing_) ->
+                                                        case exposing_ of
+                                                            Exposing.All _ ->
+                                                                True
+
+                                                            Exposing.Explicit nodes ->
+                                                                nodes
+                                                                    |> List.any
+                                                                        (\topLevelExposeNode ->
+                                                                            case Node.value topLevelExposeNode of
+                                                                                Exposing.FunctionExpose _ ->
+                                                                                    False
+
+                                                                                Exposing.InfixExpose _ ->
+                                                                                    False
+
+                                                                                Exposing.TypeOrAliasExpose exposedName ->
+                                                                                    exposedName == name
+
+                                                                                Exposing.TypeExpose exposedType ->
+                                                                                    exposedType.name == name
+                                                                        )
+
+                                                    _ ->
+                                                        False
+                                            )
+                            in
+                            if otherImportConflicts then
+                                []
+
+                            else
+                                let
+                                    exposesAll =
+                                        matchingImports
+                                            |> List.any
+                                                (\importNode ->
+                                                    case (Node.value importNode).exposingList of
+                                                        Just (Node _ (Exposing.All _)) ->
+                                                            True
+
+                                                        _ ->
+                                                            False
+                                                )
+
+                                    importFix =
+                                        if exposesAll then
+                                            []
+
+                                        else
+                                            let
+                                                maybeExistingExposing =
+                                                    matchingImports
+                                                        |> List.filterMap
+                                                            (\importNode ->
+                                                                case (Node.value importNode).exposingList of
+                                                                    Just (Node _ (Exposing.Explicit (firstExposed :: _))) ->
+                                                                        Just firstExposed
+
+                                                                    _ ->
+                                                                        Nothing
+                                                            )
+                                                        |> List.head
+                                            in
+                                            case maybeExistingExposing of
+                                                Just existingExposing ->
+                                                    [ Fix.insertAt (Node.range existingExposing).start (name ++ ", ") ]
+
+                                                Nothing ->
+                                                    case matchingImports of
+                                                        -- If no matching imports, assume it is part of the default imports.
+                                                        [] ->
+                                                            []
+
+                                                        firstImport :: _ ->
+                                                            [ Fix.insertAt (Node.range firstImport).end (" exposing (" ++ name ++ ")") ]
+                                in
+                                [ Rule.errorWithFix
+                                    { message = "This type can be simplified to just `" ++ name ++ "`."
+                                    , details = [ "It can be considered a bit silly to say the same word twice like in `" ++ name ++ "." ++ name ++ "`. This rule simplifies to just `" ++ name ++ "`. This follows the convention of centering modules around a type." ]
+                                    }
+                                    range
+                                    (Fix.removeRange
+                                        { start = range.start
+                                        , end =
+                                            { row = range.start.row
+
+                                            -- Add 1 to the column to remove the dot.
+                                            , column = range.start.column + String.length name + 1
+                                            }
+                                        }
+                                        :: importFix
+                                    )
+                                ]
+
+                        -- Should not happen.
+                        Nothing ->
+                            []
+
+            else
+                []
+
+        _ ->
+            []
 
 
 partition : (a -> Bool) -> List a -> ( List a, List a )
