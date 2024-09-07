@@ -68,11 +68,26 @@ elm-review --template jfmengels/elm-review-code-style/example --rules NoRedundan
 -}
 rule : Rule
 rule =
-    Rule.newModuleRuleSchemaUsingContextCreator "NoRedundantlyQualifiedType" initialContext
+    Rule.newProjectRuleSchema "NoRedundantlyQualifiedType" initialContext
+        |> Rule.withModuleVisitor moduleVisitor
+        |> Rule.withModuleContextUsingContextCreator
+            { fromProjectToModule = fromProjectToModule
+            , fromModuleToProject = fromModuleToProject
+            , foldProjectContexts = foldProjectContexts
+            }
+        |> Rule.providesFixesForProjectRule
+        |> Rule.fromProjectRuleSchema
+
+
+moduleVisitor : Rule.ModuleRuleSchema schemaState ModuleContext -> Rule.ModuleRuleSchema { schemaState | hasAtLeastOneVisitor : () } ModuleContext
+moduleVisitor schema =
+    schema
         |> Rule.withDeclarationEnterVisitor declarationVisitor
         |> Rule.withLetDeclarationEnterVisitor letDeclarationEnterVisitor
-        |> Rule.providesFixesForModuleRule
-        |> Rule.fromModuleRuleSchema
+
+
+type alias ProjectContext =
+    {}
 
 
 type alias ModuleContext =
@@ -82,10 +97,15 @@ type alias ModuleContext =
     }
 
 
-initialContext : Rule.ContextCreator () ModuleContext
+initialContext : ProjectContext
 initialContext =
+    {}
+
+
+fromProjectToModule : Rule.ContextCreator ProjectContext ModuleContext
+fromProjectToModule =
     Rule.initContextCreator
-        (\lookupTable ast () ->
+        (\lookupTable ast projectContext ->
             { lookupTable = lookupTable
             , imports = ast.imports
             , typesDefinedInModule = collectTypesDefinedInModule ast.declarations
@@ -93,6 +113,19 @@ initialContext =
         )
         |> Rule.withModuleNameLookupTable
         |> Rule.withFullAst
+
+
+fromModuleToProject : Rule.ContextCreator ModuleContext ProjectContext
+fromModuleToProject =
+    Rule.initContextCreator
+        (\moduleContext ->
+            {}
+        )
+
+
+foldProjectContexts : ProjectContext -> ProjectContext -> ProjectContext
+foldProjectContexts newContext previousContext =
+    {}
 
 
 collectTypesDefinedInModule : List (Node Declaration) -> Set String
