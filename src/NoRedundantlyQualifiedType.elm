@@ -70,6 +70,7 @@ rule : Rule
 rule =
     Rule.newProjectRuleSchema "NoRedundantlyQualifiedType" initialContext
         |> Rule.withModuleVisitor moduleVisitor
+        -- TODO Add dependencies visitor
         |> Rule.withModuleContextUsingContextCreator
             { fromProjectToModule = fromProjectToModule
             , fromModuleToProject = fromModuleToProject
@@ -135,6 +136,8 @@ fromModuleToProject =
                             typeName
             in
             { exposesSelfNamedType =
+                -- TODO Only look at contents if exposing (..)
+                -- Otherwise look at exposing clause
                 if Set.member lastSegment moduleContext.typesDefinedInModule then
                     Set.singleton moduleName
 
