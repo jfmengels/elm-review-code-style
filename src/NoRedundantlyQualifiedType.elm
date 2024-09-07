@@ -75,14 +75,14 @@ rule =
         |> Rule.fromModuleRuleSchema
 
 
-type alias Context =
+type alias ModuleContext =
     { lookupTable : ModuleNameLookupTable
     , imports : List (Node Import)
     , typesDefinedInModule : Set String
     }
 
 
-initialContext : Rule.ContextCreator () Context
+initialContext : Rule.ContextCreator () ModuleContext
 initialContext =
     Rule.initContextCreator
         (\lookupTable ast () ->
@@ -121,7 +121,7 @@ collectTypesDefinedInModule =
         >> Set.fromList
 
 
-declarationVisitor : Node Declaration -> Context -> ( List (Rule.Error {}), Context )
+declarationVisitor : Node Declaration -> ModuleContext -> ( List (Rule.Error {}), ModuleContext )
 declarationVisitor node context =
     case Node.value node of
         FunctionDeclaration function ->
@@ -150,7 +150,7 @@ declarationVisitor node context =
             ( [], context )
 
 
-letDeclarationEnterVisitor : Node Expression.LetBlock -> Node Expression.LetDeclaration -> Context -> ( List (Rule.Error {}), Context )
+letDeclarationEnterVisitor : Node Expression.LetBlock -> Node Expression.LetDeclaration -> ModuleContext -> ( List (Rule.Error {}), ModuleContext )
 letDeclarationEnterVisitor _ letDeclaration context =
     case Node.value letDeclaration of
         LetFunction function ->
@@ -160,7 +160,7 @@ letDeclarationEnterVisitor _ letDeclaration context =
             ( [], context )
 
 
-doFunction : Context -> Function -> List (Rule.Error {})
+doFunction : ModuleContext -> Function -> List (Rule.Error {})
 doFunction context function =
     case function.signature of
         Just (Node _ signature) ->
@@ -170,7 +170,7 @@ doFunction context function =
             []
 
 
-doTypeAnnotation : Context -> Node TypeAnnotation -> List (Rule.Error {})
+doTypeAnnotation : ModuleContext -> Node TypeAnnotation -> List (Rule.Error {})
 doTypeAnnotation context typeAnnotation =
     case Node.value typeAnnotation of
         GenericType _ ->
@@ -195,7 +195,7 @@ doTypeAnnotation context typeAnnotation =
             doTypeAnnotation context left ++ doTypeAnnotation context right
 
 
-doRecordDefinition : List (Node RecordField) -> Context -> List (Rule.Error {})
+doRecordDefinition : List (Node RecordField) -> ModuleContext -> List (Rule.Error {})
 doRecordDefinition recordDefinition context =
     recordDefinition
         |> List.concatMap
@@ -204,7 +204,7 @@ doRecordDefinition recordDefinition context =
             )
 
 
-doConstructor : Context -> Node ( ModuleName, String ) -> List (Rule.Error {})
+doConstructor : ModuleContext -> Node ( ModuleName, String ) -> List (Rule.Error {})
 doConstructor context constructor =
     case constructor of
         Node range ( [ qualifier ], name ) ->
