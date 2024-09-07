@@ -75,6 +75,7 @@ rule =
             , fromModuleToProject = fromModuleToProject
             , foldProjectContexts = foldProjectContexts
             }
+        |> Rule.withContextFromImportedModules
         |> Rule.providesFixesForProjectRule
         |> Rule.fromProjectRuleSchema
 
@@ -87,19 +88,22 @@ moduleVisitor schema =
 
 
 type alias ProjectContext =
-    {}
+    { exposesSelfNamedType : Set ModuleName
+    }
 
 
 type alias ModuleContext =
     { lookupTable : ModuleNameLookupTable
     , imports : List (Node Import)
     , typesDefinedInModule : Set String
+    , exposesSelfNamedType : Set ModuleName
     }
 
 
 initialContext : ProjectContext
 initialContext =
-    {}
+    { exposesSelfNamedType = Set.empty
+    }
 
 
 fromProjectToModule : Rule.ContextCreator ProjectContext ModuleContext
@@ -109,6 +113,7 @@ fromProjectToModule =
             { lookupTable = lookupTable
             , imports = ast.imports
             , typesDefinedInModule = collectTypesDefinedInModule ast.declarations
+            , exposesSelfNamedType = projectContext.exposesSelfNamedType
             }
         )
         |> Rule.withModuleNameLookupTable
@@ -118,14 +123,32 @@ fromProjectToModule =
 fromModuleToProject : Rule.ContextCreator ModuleContext ProjectContext
 fromModuleToProject =
     Rule.initContextCreator
-        (\moduleContext ->
-            {}
+        (\moduleName moduleContext ->
+            let
+                lastSegment : String
+                lastSegment =
+                    case List.reverse moduleName of
+                        [] ->
+                            "unknown"
+
+                        typeName :: _ ->
+                            typeName
+            in
+            { exposesSelfNamedType =
+                if Set.member lastSegment moduleContext.typesDefinedInModule then
+                    Set.singleton moduleName
+
+                else
+                    Set.empty
+            }
         )
+        |> Rule.withModuleName
 
 
 foldProjectContexts : ProjectContext -> ProjectContext -> ProjectContext
 foldProjectContexts newContext previousContext =
-    {}
+    { exposesSelfNamedType = Set.union newContext.exposesSelfNamedType previousContext.exposesSelfNamedType
+    }
 
 
 collectTypesDefinedInModule : List (Node Declaration) -> Set String
