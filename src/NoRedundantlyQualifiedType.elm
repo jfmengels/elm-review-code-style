@@ -93,6 +93,7 @@ moduleVisitor schema =
 
 type alias ProjectContext =
     { exposedTypes : Dict ModuleName (Set String)
+    , preludeImportedTypes : Dict String ImportedType
     }
 
 
@@ -112,6 +113,7 @@ type ImportedType
 initialContext : ProjectContext
 initialContext =
     { exposedTypes = Dict.empty
+    , preludeImportedTypes = Dict.empty
     }
 
 
@@ -122,7 +124,7 @@ fromProjectToModule =
             { lookupTable = lookupTable
             , imports = ast.imports
             , typesDefinedInModule = collectTypesDefinedInModule ast.declarations
-            , importedTypes = List.foldl (collectImportedTypes projectContext.exposedTypes) Dict.empty (elmCorePrelude ++ ast.imports)
+            , importedTypes = List.foldl (collectImportedTypes projectContext.exposedTypes) projectContext.preludeImportedTypes ast.imports
             }
         )
         |> Rule.withModuleNameLookupTable
@@ -141,6 +143,7 @@ fromModuleToProject =
 
                 else
                     Dict.singleton moduleName moduleContext.typesDefinedInModule
+            , preludeImportedTypes = Dict.empty
             }
         )
         |> Rule.withModuleName
@@ -149,6 +152,7 @@ fromModuleToProject =
 foldProjectContexts : ProjectContext -> ProjectContext -> ProjectContext
 foldProjectContexts newContext previousContext =
     { exposedTypes = Dict.union newContext.exposedTypes previousContext.exposedTypes
+    , preludeImportedTypes = previousContext.preludeImportedTypes
     }
 
 
@@ -184,7 +188,11 @@ dependenciesVisitor dependencies projectContext =
                 projectContext.exposedTypes
                 dependencies
     in
-    ( [], { exposedTypes = exposedTypes } )
+    ( []
+    , { exposedTypes = exposedTypes
+      , preludeImportedTypes = List.foldl (collectImportedTypes exposedTypes) Dict.empty elmCorePrelude
+      }
+    )
 
 
 collectTypesDefinedInModule : List (Node Declaration) -> Set String
