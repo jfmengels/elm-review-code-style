@@ -91,7 +91,7 @@ moduleVisitor schema =
 
 
 type alias ProjectContext =
-    { exposesSelfNamedType : Set ModuleName
+    { exposedTypes : Dict ModuleName (Set String)
     }
 
 
@@ -99,13 +99,13 @@ type alias ModuleContext =
     { lookupTable : ModuleNameLookupTable
     , imports : List (Node Import)
     , typesDefinedInModule : Set String
-    , exposesSelfNamedType : Set ModuleName
+    , exposedTypes : Dict ModuleName (Set String)
     }
 
 
 initialContext : ProjectContext
 initialContext =
-    { exposesSelfNamedType = Set.empty
+    { exposedTypes = Dict.empty
     }
 
 
@@ -116,7 +116,7 @@ fromProjectToModule =
             { lookupTable = lookupTable
             , imports = ast.imports
             , typesDefinedInModule = collectTypesDefinedInModule ast.declarations
-            , exposesSelfNamedType = projectContext.exposesSelfNamedType
+            , exposedTypes = projectContext.exposedTypes
             }
         )
         |> Rule.withModuleNameLookupTable
@@ -127,24 +127,14 @@ fromModuleToProject : Rule.ContextCreator ModuleContext ProjectContext
 fromModuleToProject =
     Rule.initContextCreator
         (\moduleName moduleContext ->
-            let
-                lastSegment : String
-                lastSegment =
-                    case List.reverse moduleName of
-                        [] ->
-                            "unknown"
-
-                        typeName :: _ ->
-                            typeName
-            in
-            { exposesSelfNamedType =
+            { exposedTypes =
                 -- TODO Only look at contents if exposing (..)
                 -- Otherwise look at exposing clause
-                if Set.member lastSegment moduleContext.typesDefinedInModule then
-                    Set.singleton moduleName
+                if Set.isEmpty moduleContext.typesDefinedInModule then
+                    Dict.empty
 
                 else
-                    Set.empty
+                    Dict.singleton moduleName moduleContext.typesDefinedInModule
             }
         )
         |> Rule.withModuleName
@@ -152,46 +142,43 @@ fromModuleToProject =
 
 foldProjectContexts : ProjectContext -> ProjectContext -> ProjectContext
 foldProjectContexts newContext previousContext =
-    { exposesSelfNamedType = Set.union newContext.exposesSelfNamedType previousContext.exposesSelfNamedType
+    { exposedTypes = Dict.union newContext.exposedTypes previousContext.exposedTypes
     }
 
 
 dependenciesVisitor : Dict String Review.Project.Dependency.Dependency -> ProjectContext -> ( List nothing, ProjectContext )
 dependenciesVisitor dependencies projectContext =
     let
-        exposesSelfNamedType : Set ModuleName
-        exposesSelfNamedType =
+        exposedTypes : Dict ModuleName (Set String)
+        exposedTypes =
             Dict.foldl
                 (\_ dep acc ->
                     List.foldl
                         (\{ name, unions, aliases } subAcc ->
                             let
-                                nameAsModuleName : List String
-                                nameAsModuleName =
-                                    String.split "." name
+                                accWithUnions : Set String
+                                accWithUnions =
+                                    List.foldl
+                                        (\union subSubAcc -> Set.insert union.name subSubAcc)
+                                        Set.empty
+                                        unions
 
-                                lastSegment : String
-                                lastSegment =
-                                    case List.reverse nameAsModuleName of
-                                        [] ->
-                                            "unknown"
-
-                                        typeName :: _ ->
-                                            typeName
+                                accWithUnionsAndAliases : Set String
+                                accWithUnionsAndAliases =
+                                    List.foldl
+                                        (\alias_ subSubAcc -> Set.insert alias_.name subSubAcc)
+                                        accWithUnions
+                                        aliases
                             in
-                            if List.any (\union -> union.name == lastSegment) unions || List.any (\alias_ -> alias_.name == lastSegment) aliases then
-                                Set.insert nameAsModuleName subAcc
-
-                            else
-                                subAcc
+                            Dict.insert (String.split "." name) accWithUnionsAndAliases subAcc
                         )
                         acc
                         (Review.Project.Dependency.modules dep)
                 )
-                projectContext.exposesSelfNamedType
+                projectContext.exposedTypes
                 dependencies
     in
-    ( [], { exposesSelfNamedType = exposesSelfNamedType } )
+    ( [], { exposedTypes = exposedTypes } )
 
 
 collectTypesDefinedInModule : List (Node Declaration) -> Set String
@@ -354,7 +341,12 @@ exposes context name =
                 Just (Node _ exposing_) ->
                     case exposing_ of
                         Exposing.All _ ->
-                            Set.member (Node.value importNode.moduleName) context.exposesSelfNamedType
+                            case Dict.get (Node.value importNode.moduleName) context.exposedTypes of
+                                Nothing ->
+                                    False
+
+                                Just typesInImportedModule ->
+                                    Set.member name typesInImportedModule
 
                         Exposing.Explicit nodes ->
                             nodes
