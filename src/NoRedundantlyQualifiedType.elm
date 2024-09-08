@@ -276,7 +276,7 @@ doConstructor context constructor =
                                 context.imports
                                     |> partition (\import_ -> Node.value (Node.value import_).moduleName == moduleName)
                         in
-                        if exposes name otherImports then
+                        if exposes context name otherImports then
                             []
 
                         else
@@ -294,7 +294,7 @@ doConstructor context constructor =
                                         , column = range.start.column + String.length name + 1
                                         }
                                     }
-                                    :: importFix name matchingImports
+                                    :: importFix context name matchingImports
                                 )
                             ]
 
@@ -306,8 +306,8 @@ doConstructor context constructor =
             []
 
 
-exposes : String -> List (Node Import) -> Bool
-exposes name =
+exposes : ModuleContext -> String -> List (Node Import) -> Bool
+exposes context name =
     List.any
         (\importNode ->
             case (Node.value importNode).exposingList of
@@ -353,9 +353,9 @@ firstExposed =
         >> List.head
 
 
-importFix : String -> List (Node Import) -> List Fix
-importFix name matchingImports =
-    if exposes name matchingImports then
+importFix : ModuleContext -> String -> List (Node Import) -> List Fix
+importFix context name matchingImports =
+    if exposes context name matchingImports then
         []
 
     else
