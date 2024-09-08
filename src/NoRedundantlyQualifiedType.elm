@@ -8,11 +8,12 @@ module NoRedundantlyQualifiedType exposing (rule)
 
 import Dict exposing (Dict)
 import Elm.Syntax.Declaration exposing (Declaration(..))
-import Elm.Syntax.Exposing as Exposing
+import Elm.Syntax.Exposing as Exposing exposing (Exposing)
 import Elm.Syntax.Expression as Expression exposing (Function, LetDeclaration(..))
 import Elm.Syntax.Import exposing (Import)
 import Elm.Syntax.ModuleName exposing (ModuleName)
 import Elm.Syntax.Node as Node exposing (Node(..))
+import Elm.Syntax.Range as Range
 import Elm.Syntax.TypeAnnotation exposing (RecordField, TypeAnnotation(..))
 import Review.Fix as Fix exposing (Fix)
 import Review.ModuleNameLookupTable as ModuleNameLookupTable exposing (ModuleNameLookupTable)
@@ -99,9 +100,13 @@ type alias ModuleContext =
     { lookupTable : ModuleNameLookupTable
     , imports : List (Node Import)
     , typesDefinedInModule : Set String
-    , importedTypes : Set String
-    , exposedTypes : Dict ModuleName (Set String)
+    , importedTypes : Dict String ImportedType
     }
+
+
+type ImportedType
+    = FromSingleModule ModuleName
+    | FromMultipleModules
 
 
 initialContext : ProjectContext
@@ -117,8 +122,7 @@ fromProjectToModule =
             { lookupTable = lookupTable
             , imports = ast.imports
             , typesDefinedInModule = collectTypesDefinedInModule ast.declarations
-            , exposedTypes = projectContext.exposedTypes
-            , importedTypes = List.foldl (collectImportedTypes projectContext.exposedTypes) Set.empty ast.imports
+            , importedTypes = List.foldl (collectImportedTypes projectContext.exposedTypes) Dict.empty (elmCorePrelude ++ ast.imports)
             }
         )
         |> Rule.withModuleNameLookupTable
@@ -304,28 +308,39 @@ doConstructor context constructor =
                             ( matchingImports, otherImports ) =
                                 context.imports
                                     |> partition (\import_ -> Node.value (Node.value import_).moduleName == moduleName)
-                        in
-                        if Set.member name context.importedTypes then
-                            []
 
-                        else
-                            [ Rule.errorWithFix
-                                { message = "This type can be simplified to just `" ++ name ++ "`."
-                                , details = [ "It can be considered a bit silly to say the same word twice like in `" ++ name ++ "." ++ name ++ "`. This rule simplifies to just `" ++ name ++ "`. This follows the convention of centering modules around a type." ]
-                                }
-                                range
-                                (Fix.removeRange
-                                    { start = range.start
-                                    , end =
-                                        { row = range.start.row
-
-                                        -- Add 1 to the column to remove the dot.
-                                        , column = range.start.column + String.length name + 1
-                                        }
+                            reportError : List Fix -> Rule.Error {}
+                            reportError additionalFixes =
+                                Rule.errorWithFix
+                                    { message = "This type can be simplified to just `" ++ name ++ "`."
+                                    , details = [ "It can be considered a bit silly to say the same word twice like in `" ++ name ++ "." ++ name ++ "`. This rule simplifies to just `" ++ name ++ "`. This follows the convention of centering modules around a type." ]
                                     }
-                                    :: importFix context name matchingImports
-                                )
-                            ]
+                                    range
+                                    (Fix.removeRange
+                                        { start = range.start
+                                        , end =
+                                            { row = range.start.row
+
+                                            -- Add 1 to the column to remove the dot.
+                                            , column = range.start.column + String.length name + 1
+                                            }
+                                        }
+                                        :: additionalFixes
+                                    )
+                        in
+                        case Dict.get name context.importedTypes of
+                            Nothing ->
+                                [ reportError (importFix name matchingImports) ]
+
+                            Just (FromSingleModule moduleNameWhichExposesType) ->
+                                if moduleName == moduleNameWhichExposesType then
+                                    [ reportError [] ]
+
+                                else
+                                    []
+
+                            Just FromMultipleModules ->
+                                []
 
                     -- Should not happen.
                     Nothing ->
@@ -335,18 +350,23 @@ doConstructor context constructor =
             []
 
 
-collectImportedTypes : Dict ModuleName (Set String) -> Node Import -> Set String -> Set String
+collectImportedTypes : Dict ModuleName (Set String) -> Node Import -> Dict String ImportedType -> Dict String ImportedType
 collectImportedTypes exposedTypes (Node _ importNode) set =
     case importNode.exposingList of
         Just (Node _ exposing_) ->
+            let
+                moduleName : ModuleName
+                moduleName =
+                    Node.value importNode.moduleName
+            in
             case exposing_ of
                 Exposing.All _ ->
-                    case Dict.get (Node.value importNode.moduleName) exposedTypes of
+                    case Dict.get moduleName exposedTypes of
                         Nothing ->
                             set
 
                         Just typesInImportedModule ->
-                            Set.union typesInImportedModule set
+                            Set.foldl (\name acc -> collectType moduleName name acc) set typesInImportedModule
 
                 Exposing.Explicit nodes ->
                     List.foldl
@@ -359,16 +379,33 @@ collectImportedTypes exposedTypes (Node _ importNode) set =
                                     set
 
                                 Exposing.TypeOrAliasExpose name ->
-                                    Set.insert name acc
+                                    collectType moduleName name acc
 
                                 Exposing.TypeExpose { name } ->
-                                    Set.insert name acc
+                                    collectType moduleName name acc
                         )
                         set
                         nodes
 
-        _ ->
+        Nothing ->
             set
+
+
+collectType : ModuleName -> String -> Dict String ImportedType -> Dict String ImportedType
+collectType moduleName name dict =
+    Dict.update name
+        (\maybe ->
+            case maybe of
+                Nothing ->
+                    Just (FromSingleModule moduleName)
+
+                Just (FromSingleModule _) ->
+                    Just FromMultipleModules
+
+                Just FromMultipleModules ->
+                    maybe
+        )
+        dict
 
 
 exposes : ModuleContext -> String -> List (Node Import) -> Bool
@@ -423,24 +460,20 @@ firstExposed =
         >> List.head
 
 
-importFix : ModuleContext -> String -> List (Node Import) -> List Fix
-importFix context name matchingImports =
-    if exposes context name matchingImports then
-        []
+importFix : String -> List (Node Import) -> List Fix
+importFix name matchingImports =
+    case firstExposed matchingImports of
+        Just existingExposing ->
+            [ Fix.insertAt (Node.range existingExposing).start (name ++ ", ") ]
 
-    else
-        case firstExposed matchingImports of
-            Just existingExposing ->
-                [ Fix.insertAt (Node.range existingExposing).start (name ++ ", ") ]
+        Nothing ->
+            case matchingImports of
+                -- If no matching imports, assume it is part of the default imports.
+                [] ->
+                    []
 
-            Nothing ->
-                case matchingImports of
-                    -- If no matching imports, assume it is part of the default imports.
-                    [] ->
-                        []
-
-                    firstImport :: _ ->
-                        [ Fix.insertAt (Node.range firstImport).end (" exposing (" ++ name ++ ")") ]
+                firstImport :: _ ->
+                    [ Fix.insertAt (Node.range firstImport).end (" exposing (" ++ name ++ ")") ]
 
 
 partition : (a -> Bool) -> List a -> ( List a, List a )
@@ -455,3 +488,107 @@ partition predicate list =
         )
         ( [], [] )
         list
+
+
+elmCorePrelude : List (Node Import)
+elmCorePrelude =
+    let
+        explicit : List Exposing.TopLevelExpose -> Maybe Exposing
+        explicit exposed =
+            exposed
+                |> List.map (Node Range.emptyRange)
+                |> Exposing.Explicit
+                |> Just
+    in
+    -- These are the default imports implicitly added by the Elm compiler
+    -- https://package.elm-lang.org/packages/elm/core/latest
+    [ createFakeImport
+        { moduleName = [ "Basics" ]
+        , moduleAlias = Nothing
+        , exposingList = Just <| Exposing.All Range.emptyRange
+        }
+    , createFakeImport
+        { moduleName = [ "List" ]
+        , moduleAlias = Nothing
+        , exposingList =
+            explicit
+                [ Exposing.TypeExpose { name = "List", open = Nothing }
+                , Exposing.InfixExpose "::"
+                ]
+        }
+    , createFakeImport
+        { moduleName = [ "Maybe" ]
+        , moduleAlias = Nothing
+        , exposingList =
+            explicit
+                [ Exposing.TypeExpose { name = "Maybe", open = Just Range.emptyRange }
+                ]
+        }
+    , createFakeImport
+        { moduleName = [ "Result" ]
+        , moduleAlias = Nothing
+        , exposingList =
+            explicit
+                [ Exposing.TypeExpose { name = "Result", open = Just Range.emptyRange }
+                ]
+        }
+    , createFakeImport
+        { moduleName = [ "String" ]
+        , moduleAlias = Nothing
+        , exposingList =
+            explicit
+                [ Exposing.TypeExpose { name = "String", open = Nothing }
+                ]
+        }
+    , createFakeImport
+        { moduleName = [ "Char" ]
+        , moduleAlias = Nothing
+        , exposingList =
+            explicit
+                [ Exposing.TypeExpose { name = "Char", open = Nothing }
+                ]
+        }
+    , createFakeImport
+        { moduleName = [ "Tuple" ]
+        , moduleAlias = Nothing
+        , exposingList = Nothing
+        }
+    , createFakeImport
+        { moduleName = [ "Debug" ]
+        , moduleAlias = Nothing
+        , exposingList = Nothing
+        }
+    , createFakeImport
+        { moduleName = [ "Platform" ]
+        , moduleAlias = Nothing
+        , exposingList =
+            explicit
+                [ Exposing.TypeExpose { name = "Program", open = Nothing }
+                ]
+        }
+    , createFakeImport
+        { moduleName = [ "Platform", "Cmd" ]
+        , moduleAlias = Just "Cmd"
+        , exposingList =
+            explicit
+                [ Exposing.TypeExpose { name = "Cmd", open = Nothing }
+                ]
+        }
+    , createFakeImport
+        { moduleName = [ "Platform", "Sub" ]
+        , moduleAlias = Just "Sub"
+        , exposingList =
+            explicit
+                [ Exposing.TypeExpose { name = "Sub", open = Nothing }
+                ]
+        }
+    ]
+
+
+createFakeImport : { moduleName : ModuleName, exposingList : Maybe Exposing, moduleAlias : Maybe String } -> Node Import
+createFakeImport { moduleName, moduleAlias, exposingList } =
+    Node Range.emptyRange
+        { moduleName = Node Range.emptyRange moduleName
+        , moduleAlias = moduleAlias |> Maybe.map (List.singleton >> Node Range.emptyRange)
+        , exposingList = exposingList |> Maybe.map (Node Range.emptyRange)
+        }
