@@ -99,6 +99,7 @@ type alias ModuleContext =
     { lookupTable : ModuleNameLookupTable
     , imports : List (Node Import)
     , typesDefinedInModule : Set String
+    , importedTypes : Set String
     , exposedTypes : Dict ModuleName (Set String)
     }
 
@@ -117,6 +118,7 @@ fromProjectToModule =
             , imports = ast.imports
             , typesDefinedInModule = collectTypesDefinedInModule ast.declarations
             , exposedTypes = projectContext.exposedTypes
+            , importedTypes = List.foldl (collectImportedTypes projectContext.exposedTypes) Set.empty ast.imports
             }
         )
         |> Rule.withModuleNameLookupTable
@@ -303,7 +305,7 @@ doConstructor context constructor =
                                 context.imports
                                     |> partition (\import_ -> Node.value (Node.value import_).moduleName == moduleName)
                         in
-                        if exposes context name otherImports then
+                        if Set.member name context.importedTypes then
                             []
 
                         else
@@ -331,6 +333,42 @@ doConstructor context constructor =
 
         _ ->
             []
+
+
+collectImportedTypes : Dict ModuleName (Set String) -> Node Import -> Set String -> Set String
+collectImportedTypes exposedTypes (Node _ importNode) set =
+    case importNode.exposingList of
+        Just (Node _ exposing_) ->
+            case exposing_ of
+                Exposing.All _ ->
+                    case Dict.get (Node.value importNode.moduleName) exposedTypes of
+                        Nothing ->
+                            set
+
+                        Just typesInImportedModule ->
+                            Set.union typesInImportedModule set
+
+                Exposing.Explicit nodes ->
+                    List.foldl
+                        (\topLevelExposeNode acc ->
+                            case Node.value topLevelExposeNode of
+                                Exposing.FunctionExpose _ ->
+                                    set
+
+                                Exposing.InfixExpose _ ->
+                                    set
+
+                                Exposing.TypeOrAliasExpose name ->
+                                    Set.insert name acc
+
+                                Exposing.TypeExpose { name } ->
+                                    Set.insert name acc
+                        )
+                        set
+                        nodes
+
+        _ ->
+            set
 
 
 exposes : ModuleContext -> String -> List (Node Import) -> Bool
