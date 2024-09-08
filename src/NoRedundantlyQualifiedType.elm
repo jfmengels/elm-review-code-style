@@ -343,25 +343,30 @@ doConstructor context constructor =
             else
                 case ModuleNameLookupTable.moduleNameFor context.lookupTable constructor of
                     Just moduleName ->
-                        case Dict.get name context.importedTypes of
-                            Nothing ->
-                                [ reportError name range (importFix moduleName name context.imports) ]
-
-                            Just (FromSingleModule moduleNameWhichExposesType) ->
-                                if moduleName == moduleNameWhichExposesType then
-                                    [ reportError name range [] ]
-
-                                else
-                                    []
-
-                            Just FromMultipleModules ->
-                                []
+                        reportErrorBasedOnImportedTypes context moduleName range name
 
                     -- Should not happen.
                     Nothing ->
                         []
 
         _ ->
+            []
+
+
+reportErrorBasedOnImportedTypes : ModuleContext -> ModuleName -> Range -> String -> List (Rule.Error {})
+reportErrorBasedOnImportedTypes context moduleName range name =
+    case Dict.get name context.importedTypes of
+        Nothing ->
+            [ reportError name range (importFix moduleName name context.imports) ]
+
+        Just (FromSingleModule moduleNameWhichExposesType) ->
+            if moduleName == moduleNameWhichExposesType then
+                [ reportError name range [] ]
+
+            else
+                []
+
+        Just FromMultipleModules ->
             []
 
 
