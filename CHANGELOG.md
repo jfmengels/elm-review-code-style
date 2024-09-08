@@ -1,5 +1,9 @@
 # Changelog
 
+## [Unreleased]
+
+- [`NoUnnecessaryTrailingUnderscore`] now doesn't report variables names `alias_`.
+
 ## [1.1.4] - 2023-04-19
 
 [`NoUnnecessaryTrailingUnderscore`] now removes the underscore from variables named `infix_`. It didn't so before because of a bug in `elm-format`, now fixed in `elm-format@0.8.7`.
@@ -67,6 +71,7 @@ Help would be appreciated to fill the blanks!
 [`NoSimpleLetBody`]: (https://package.elm-lang.org/packages/jfmengels/elm-review-code-style/latest/NoSimpleLetBody)
 [`NoUnnecessaryTrailingUnderscore`]: (https://package.elm-lang.org/packages/jfmengels/elm-review-code-style/latest/NoUnnecessaryTrailingUnderscore)
 
+[Unreleased]: https://github.com/jfmengels/elm-review-code-style/compare/v1.1.3...HEAD
 [1.1.3]: https://github.com/jfmengels/elm-review-code-style/releases/tag/1.1.3
 [1.1.2]: https://github.com/jfmengels/elm-review-code-style/releases/tag/1.1.2
 [1.1.1]: https://github.com/jfmengels/elm-review-code-style/releases/tag/1.1.1

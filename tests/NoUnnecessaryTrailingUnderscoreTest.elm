@@ -114,6 +114,7 @@ of_ = 1
 let_ = 1
 in_ = 1
 type_ = 1
+alias_ = 1
 module_ = 1
 where_ = 1
 import_ = 1

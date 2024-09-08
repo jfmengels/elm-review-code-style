@@ -440,6 +440,7 @@ reservedElmKeywords =
         , "let_"
         , "in_"
         , "type_"
+        , "alias_"
         , "module_"
         , "where_"
         , "import_"
