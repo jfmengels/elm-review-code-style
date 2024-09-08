@@ -15,7 +15,7 @@ import Elm.Syntax.Import exposing (Import)
 import Elm.Syntax.Module as Module
 import Elm.Syntax.ModuleName exposing (ModuleName)
 import Elm.Syntax.Node as Node exposing (Node(..))
-import Elm.Syntax.Range as Range
+import Elm.Syntax.Range as Range exposing (Range)
 import Elm.Syntax.TypeAnnotation exposing (RecordField, TypeAnnotation(..))
 import Review.Fix as Fix exposing (Fix)
 import Review.ModuleNameLookupTable as ModuleNameLookupTable exposing (ModuleNameLookupTable)
@@ -343,33 +343,13 @@ doConstructor context constructor =
             else
                 case ModuleNameLookupTable.moduleNameFor context.lookupTable constructor of
                     Just moduleName ->
-                        let
-                            reportError : List Fix -> Rule.Error {}
-                            reportError additionalFixes =
-                                Rule.errorWithFix
-                                    { message = "This type can be simplified to just `" ++ name ++ "`."
-                                    , details = [ "It can be considered a bit silly to say the same word twice like in `" ++ name ++ "." ++ name ++ "`. This rule simplifies to just `" ++ name ++ "`. This follows the convention of centering modules around a type." ]
-                                    }
-                                    range
-                                    (Fix.removeRange
-                                        { start = range.start
-                                        , end =
-                                            { row = range.start.row
-
-                                            -- Add 1 to the column to remove the dot.
-                                            , column = range.start.column + String.length name + 1
-                                            }
-                                        }
-                                        :: additionalFixes
-                                    )
-                        in
                         case Dict.get name context.importedTypes of
                             Nothing ->
-                                [ reportError (importFix moduleName name context.imports) ]
+                                [ reportError name range (importFix moduleName name context.imports) ]
 
                             Just (FromSingleModule moduleNameWhichExposesType) ->
                                 if moduleName == moduleNameWhichExposesType then
-                                    [ reportError [] ]
+                                    [ reportError name range [] ]
 
                                 else
                                     []
@@ -383,6 +363,26 @@ doConstructor context constructor =
 
         _ ->
             []
+
+
+reportError : String -> Range -> List Fix -> Rule.Error {}
+reportError name range additionalFixes =
+    Rule.errorWithFix
+        { message = "This type can be simplified to just `" ++ name ++ "`."
+        , details = [ "It can be considered a bit silly to say the same word twice like in `" ++ name ++ "." ++ name ++ "`. This rule simplifies to just `" ++ name ++ "`. This follows the convention of centering modules around a type." ]
+        }
+        range
+        (Fix.removeRange
+            { start = range.start
+            , end =
+                { row = range.start.row
+
+                -- Add 1 to the column to remove the dot.
+                , column = range.start.column + String.length name + 1
+                }
+            }
+            :: additionalFixes
+        )
 
 
 collectImportedTypes : Dict ModuleName (Set String) -> Node Import -> Dict String ImportedType -> Dict String ImportedType
