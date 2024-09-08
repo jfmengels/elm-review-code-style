@@ -313,10 +313,6 @@ doConstructor context constructor =
                 case ModuleNameLookupTable.moduleNameFor context.lookupTable constructor of
                     Just moduleName ->
                         let
-                            ( matchingImports, otherImports ) =
-                                context.imports
-                                    |> partition (\import_ -> Node.value (Node.value import_).moduleName == moduleName)
-
                             reportError : List Fix -> Rule.Error {}
                             reportError additionalFixes =
                                 Rule.errorWithFix
@@ -338,7 +334,7 @@ doConstructor context constructor =
                         in
                         case Dict.get name context.importedTypes of
                             Nothing ->
-                                [ reportError (importFix name matchingImports) ]
+                                [ reportError (importFix moduleName name context.imports) ]
 
                             Just (FromSingleModule moduleNameWhichExposesType) ->
                                 if moduleName == moduleNameWhichExposesType then
@@ -416,86 +412,28 @@ collectType moduleName name dict =
         dict
 
 
-exposes : ModuleContext -> String -> List (Node Import) -> Bool
-exposes context name =
-    List.any
-        (\(Node _ importNode) ->
-            case importNode.exposingList of
-                Just (Node _ exposing_) ->
-                    case exposing_ of
-                        Exposing.All _ ->
-                            case Dict.get (Node.value importNode.moduleName) context.exposedTypes of
-                                Nothing ->
-                                    False
-
-                                Just typesInImportedModule ->
-                                    Set.member name typesInImportedModule
-
-                        Exposing.Explicit nodes ->
-                            nodes
-                                |> List.any
-                                    (\topLevelExposeNode ->
-                                        case Node.value topLevelExposeNode of
-                                            Exposing.FunctionExpose _ ->
-                                                False
-
-                                            Exposing.InfixExpose _ ->
-                                                False
-
-                                            Exposing.TypeOrAliasExpose exposedName ->
-                                                exposedName == name
-
-                                            Exposing.TypeExpose exposedType ->
-                                                exposedType.name == name
-                                    )
-
-                _ ->
-                    False
-        )
-
-
-firstExposed : List (Node Import) -> Maybe (Node Exposing.TopLevelExpose)
-firstExposed =
-    List.filterMap
-        (\importNode ->
+importFix : ModuleName -> String -> List (Node Import) -> List Fix
+importFix moduleName name imports =
+    let
+        matchingImport : Maybe (Node Import)
+        matchingImport =
+            find (\import_ -> Node.value (Node.value import_).moduleName == moduleName) imports
+    in
+    case matchingImport of
+        Just importNode ->
             case (Node.value importNode).exposingList of
-                Just (Node _ (Exposing.Explicit (first :: _))) ->
-                    Just first
-
-                _ ->
-                    Nothing
-        )
-        >> List.head
-
-
-importFix : String -> List (Node Import) -> List Fix
-importFix name matchingImports =
-    case firstExposed matchingImports of
-        Just existingExposing ->
-            [ Fix.insertAt (Node.range existingExposing).start (name ++ ", ") ]
-
-        Nothing ->
-            case matchingImports of
-                -- If no matching imports, assume it is part of the default imports.
-                [] ->
+                Just (Node _ (Exposing.All _)) ->
                     []
 
-                firstImport :: _ ->
-                    [ Fix.insertAt (Node.range firstImport).end (" exposing (" ++ name ++ ")") ]
+                Just (Node _ (Exposing.Explicit (first :: _))) ->
+                    [ Fix.insertAt (Node.range first).start (name ++ ", ") ]
 
+                _ ->
+                    [ Fix.insertAt (Node.range importNode).end (" exposing (" ++ name ++ ")") ]
 
-partition : (a -> Bool) -> List a -> ( List a, List a )
-partition predicate list =
-    List.foldr
-        (\element ( trueList, falseList ) ->
-            if predicate element then
-                ( element :: trueList, falseList )
-
-            else
-                ( trueList, element :: falseList )
-        )
-        ( [], [] )
-        list
+        Nothing ->
+            -- If no matching imports, assume it is part of the default imports.
+            []
 
 
 elmCorePrelude : List (Node Import)
@@ -600,3 +538,17 @@ createFakeImport { moduleName, moduleAlias, exposingList } =
         , moduleAlias = moduleAlias |> Maybe.map (List.singleton >> Node Range.emptyRange)
         , exposingList = exposingList |> Maybe.map (Node Range.emptyRange)
         }
+
+
+find : (a -> Bool) -> List a -> Maybe a
+find predicate list =
+    case list of
+        [] ->
+            Nothing
+
+        first :: rest ->
+            if predicate first then
+                Just first
+
+            else
+                find predicate rest

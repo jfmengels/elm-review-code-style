@@ -468,28 +468,6 @@ a : Set a
 a = Set.empty
 """
                             ]
-            , test "add the type to the first import with an exposing list" <|
-                \() ->
-                    """module A exposing (..)
-import Set
-import Set exposing (empty)
-a : Set.Set a
-a = empty
-"""
-                        |> Review.Test.run rule
-                        |> Review.Test.expectErrors
-                            [ Review.Test.error
-                                { message = message "Set"
-                                , details = details "Set"
-                                , under = "Set.Set"
-                                }
-                                |> Review.Test.whenFixed """module A exposing (..)
-import Set
-import Set exposing (Set, empty)
-a : Set a
-a = empty
-"""
-                            ]
             , test "add the type to the first import when none expose anything" <|
                 \() ->
                     """module A exposing (..)
