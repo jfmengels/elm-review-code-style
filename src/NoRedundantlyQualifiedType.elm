@@ -434,8 +434,12 @@ collectType moduleName name dict =
                 Nothing ->
                     Just (FromSingleModule moduleName)
 
-                Just (FromSingleModule _) ->
-                    Just FromMultipleModules
+                Just (FromSingleModule previousModuleName) ->
+                    if previousModuleName == moduleName then
+                        maybe
+
+                    else
+                        Just FromMultipleModules
 
                 Just FromMultipleModules ->
                     maybe

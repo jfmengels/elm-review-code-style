@@ -295,6 +295,28 @@ a : Set a
 a = Set.empty
 """
                         ]
+        , test "should report an error even if the same module exposes the same type twice" <|
+            \() ->
+                """module A exposing (..)
+import Set exposing (Set)
+import Set exposing (Set)
+a : Set.Set a
+a = Set.empty
+"""
+                    |> Review.Test.run rule
+                    |> Review.Test.expectErrors
+                        [ Review.Test.error
+                            { message = message "Set"
+                            , details = details "Set"
+                            , under = "Set.Set"
+                            }
+                            |> Review.Test.whenFixed """module A exposing (..)
+import Set exposing (Set)
+import Set exposing (Set)
+a : Set a
+a = Set.empty
+"""
+                        ]
         , test "should not report an error qualified by more namespaces" <|
             \() ->
                 """module A exposing (..)
