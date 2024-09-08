@@ -6,6 +6,7 @@ module NoRedundantlyQualifiedType exposing (rule)
 
 -}
 
+import Dict exposing (Dict)
 import Elm.Syntax.Declaration exposing (Declaration(..))
 import Elm.Syntax.Exposing as Exposing
 import Elm.Syntax.Expression as Expression exposing (Function, LetDeclaration(..))
@@ -15,6 +16,7 @@ import Elm.Syntax.Node as Node exposing (Node(..))
 import Elm.Syntax.TypeAnnotation exposing (RecordField, TypeAnnotation(..))
 import Review.Fix as Fix exposing (Fix)
 import Review.ModuleNameLookupTable as ModuleNameLookupTable exposing (ModuleNameLookupTable)
+import Review.Project.Dependency
 import Review.Rule as Rule exposing (Rule)
 import Set exposing (Set)
 
@@ -70,7 +72,7 @@ rule : Rule
 rule =
     Rule.newProjectRuleSchema "NoRedundantlyQualifiedType" initialContext
         |> Rule.withModuleVisitor moduleVisitor
-        -- TODO Add dependencies visitor
+        |> Rule.withDependenciesProjectVisitor dependenciesVisitor
         |> Rule.withModuleContextUsingContextCreator
             { fromProjectToModule = fromProjectToModule
             , fromModuleToProject = fromModuleToProject
@@ -152,6 +154,11 @@ foldProjectContexts : ProjectContext -> ProjectContext -> ProjectContext
 foldProjectContexts newContext previousContext =
     { exposesSelfNamedType = Set.union newContext.exposesSelfNamedType previousContext.exposesSelfNamedType
     }
+
+
+dependenciesVisitor : Dict String Review.Project.Dependency.Dependency -> ProjectContext -> ( List nothing, ProjectContext )
+dependenciesVisitor dependencies projectContext =
+    ( [], projectContext )
 
 
 collectTypesDefinedInModule : List (Node Declaration) -> Set String
