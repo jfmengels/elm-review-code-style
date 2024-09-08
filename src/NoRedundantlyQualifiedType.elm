@@ -158,7 +158,40 @@ foldProjectContexts newContext previousContext =
 
 dependenciesVisitor : Dict String Review.Project.Dependency.Dependency -> ProjectContext -> ( List nothing, ProjectContext )
 dependenciesVisitor dependencies projectContext =
-    ( [], projectContext )
+    let
+        exposesSelfNamedType : Set ModuleName
+        exposesSelfNamedType =
+            Dict.foldl
+                (\_ dep acc ->
+                    List.foldl
+                        (\{ name, unions, aliases } subAcc ->
+                            let
+                                nameAsModuleName : List String
+                                nameAsModuleName =
+                                    String.split "." name
+
+                                lastSegment : String
+                                lastSegment =
+                                    case List.reverse nameAsModuleName of
+                                        [] ->
+                                            "unknown"
+
+                                        typeName :: _ ->
+                                            typeName
+                            in
+                            if List.any (\union -> union.name == lastSegment) unions || List.any (\alias_ -> alias_.name == lastSegment) aliases then
+                                Set.insert nameAsModuleName subAcc
+
+                            else
+                                subAcc
+                        )
+                        acc
+                        (Review.Project.Dependency.modules dep)
+                )
+                projectContext.exposesSelfNamedType
+                dependencies
+    in
+    ( [], { exposesSelfNamedType = exposesSelfNamedType } )
 
 
 collectTypesDefinedInModule : List (Node Declaration) -> Set String
