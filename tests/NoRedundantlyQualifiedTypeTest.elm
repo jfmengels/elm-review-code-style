@@ -242,6 +242,37 @@ a = Set.empty
 """
                             ]
                         ]
+        , test "should report an error if an import exposes everything and defines but doesn't expose the type we want to shorten" <|
+            \() ->
+                [ """module A exposing (..)
+import Set
+import SomethingElse exposing (..)
+a : Set.Set a
+a = Set.empty
+""", """module SomethingElse exposing (NotSet)
+
+type NotSet a =
+    NotSet a
+
+type Set a =
+    Set a
+""" ]
+                    |> Review.Test.runOnModules rule
+                    |> Review.Test.expect
+                        [ Review.Test.moduleErrors "A"
+                            [ Review.Test.error
+                                { message = message "Set"
+                                , details = details "Set"
+                                , under = "Set.Set"
+                                }
+                                |> Review.Test.whenFixed """module A exposing (..)
+import Set exposing (Set)
+import SomethingElse exposing (..)
+a : Set a
+a = Set.empty
+"""
+                            ]
+                        ]
         , test "should report an error if only the correct import exposes everything" <|
             \() ->
                 """module A exposing (..)

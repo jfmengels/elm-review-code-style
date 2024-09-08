@@ -8,9 +8,11 @@ module NoRedundantlyQualifiedType exposing (rule)
 
 import Dict exposing (Dict)
 import Elm.Syntax.Declaration exposing (Declaration(..))
-import Elm.Syntax.Exposing as Exposing exposing (Exposing)
+import Elm.Syntax.Exposing as Exposing exposing (Exposing(..))
 import Elm.Syntax.Expression as Expression exposing (Function, LetDeclaration(..))
+import Elm.Syntax.File
 import Elm.Syntax.Import exposing (Import)
+import Elm.Syntax.Module as Module
 import Elm.Syntax.ModuleName exposing (ModuleName)
 import Elm.Syntax.Node as Node exposing (Node(..))
 import Elm.Syntax.Range as Range
@@ -134,19 +136,48 @@ fromProjectToModule =
 fromModuleToProject : Rule.ContextCreator ModuleContext ProjectContext
 fromModuleToProject =
     Rule.initContextCreator
-        (\moduleName moduleContext ->
-            { exposedTypes =
-                -- TODO Only look at contents if exposing (..)
-                -- Otherwise look at exposing clause
-                if Set.isEmpty moduleContext.typesDefinedInModule then
-                    Dict.empty
-
-                else
-                    Dict.singleton moduleName moduleContext.typesDefinedInModule
+        (\moduleName ast moduleContext ->
+            { exposedTypes = collectExposedFromModule moduleName ast moduleContext
             , preludeImportedTypes = Dict.empty
             }
         )
         |> Rule.withModuleName
+        |> Rule.withFullAst
+
+
+collectExposedFromModule : ModuleName -> Elm.Syntax.File.File -> ModuleContext -> Dict ModuleName (Set String)
+collectExposedFromModule moduleName ast moduleContext =
+    let
+        exposedTypes : Set String
+        exposedTypes =
+            case Module.exposingList (Node.value ast.moduleDefinition) of
+                Exposing.All _ ->
+                    moduleContext.typesDefinedInModule
+
+                Explicit nodes ->
+                    List.foldl
+                        (\topLevelExposeNode acc ->
+                            case Node.value topLevelExposeNode of
+                                Exposing.FunctionExpose _ ->
+                                    acc
+
+                                Exposing.InfixExpose _ ->
+                                    acc
+
+                                Exposing.TypeOrAliasExpose name ->
+                                    Set.insert name acc
+
+                                Exposing.TypeExpose { name } ->
+                                    Set.insert name acc
+                        )
+                        Set.empty
+                        nodes
+    in
+    if Set.isEmpty exposedTypes then
+        Dict.empty
+
+    else
+        Dict.singleton moduleName exposedTypes
 
 
 foldProjectContexts : ProjectContext -> ProjectContext -> ProjectContext
