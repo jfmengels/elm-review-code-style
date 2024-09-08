@@ -309,12 +309,12 @@ doConstructor context constructor =
 exposes : ModuleContext -> String -> List (Node Import) -> Bool
 exposes context name =
     List.any
-        (\importNode ->
-            case (Node.value importNode).exposingList of
+        (\(Node _ importNode) ->
+            case importNode.exposingList of
                 Just (Node _ exposing_) ->
                     case exposing_ of
                         Exposing.All _ ->
-                            True
+                            Set.member (Node.value importNode.moduleName) context.exposesSelfNamedType
 
                         Exposing.Explicit nodes ->
                             nodes
