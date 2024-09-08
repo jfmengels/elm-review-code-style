@@ -84,8 +84,8 @@ rule =
 moduleVisitor : Rule.ModuleRuleSchema schemaState ModuleContext -> Rule.ModuleRuleSchema { schemaState | hasAtLeastOneVisitor : () } ModuleContext
 moduleVisitor schema =
     schema
-        |> Rule.withDeclarationEnterVisitor declarationVisitor
-        |> Rule.withLetDeclarationEnterVisitor letDeclarationEnterVisitor
+        |> Rule.withDeclarationEnterVisitor (\node context -> ( declarationVisitor node context, context ))
+        |> Rule.withLetDeclarationEnterVisitor (\_ node context -> ( letDeclarationEnterVisitor node context, context ))
 
 
 type alias ProjectContext =
@@ -180,43 +180,41 @@ collectTypesDefinedInModule =
         >> Set.fromList
 
 
-declarationVisitor : Node Declaration -> ModuleContext -> ( List (Rule.Error {}), ModuleContext )
+declarationVisitor : Node Declaration -> ModuleContext -> List (Rule.Error {})
 declarationVisitor node context =
     case Node.value node of
         FunctionDeclaration function ->
-            ( doFunction context function, context )
+            doFunction context function
 
         AliasDeclaration typeAlias ->
-            ( doTypeAnnotation context typeAlias.typeAnnotation, context )
+            doTypeAnnotation context typeAlias.typeAnnotation
 
         CustomTypeDeclaration type_ ->
-            ( type_.constructors
+            type_.constructors
                 |> List.concatMap
                     (Node.value
                         >> .arguments
                         >> List.concatMap (doTypeAnnotation context)
                     )
-            , context
-            )
 
         PortDeclaration signature ->
-            ( doTypeAnnotation context signature.typeAnnotation, context )
+            doTypeAnnotation context signature.typeAnnotation
 
         InfixDeclaration _ ->
-            ( [], context )
+            []
 
         Destructuring _ _ ->
-            ( [], context )
+            []
 
 
-letDeclarationEnterVisitor : Node Expression.LetBlock -> Node Expression.LetDeclaration -> ModuleContext -> ( List (Rule.Error {}), ModuleContext )
-letDeclarationEnterVisitor _ letDeclaration context =
+letDeclarationEnterVisitor : Node Expression.LetDeclaration -> ModuleContext -> List (Rule.Error {})
+letDeclarationEnterVisitor letDeclaration context =
     case Node.value letDeclaration of
         LetFunction function ->
-            ( doFunction context function, context )
+            doFunction context function
 
         LetDestructuring _ _ ->
-            ( [], context )
+            []
 
 
 doFunction : ModuleContext -> Function -> List (Rule.Error {})
