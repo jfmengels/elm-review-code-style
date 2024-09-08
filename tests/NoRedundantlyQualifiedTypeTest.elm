@@ -158,17 +158,90 @@ type String = String
           """
                     |> Review.Test.run rule
                     |> Review.Test.expectNoErrors
-        , test "should not report an error if another module exposes everything" <|
-            -- Currently, this rule is not smart enough to know what is exposed by `(..)`.
+        , test "should not report an error if an import exposes everything including the type we want to shorten (exposing everything)" <|
             \() ->
-                """module A exposing (..)
+                [ """module A exposing (..)
 import Set
 import OtherSet exposing (..)
 a : Set.Set a
 a = Set.empty
-"""
-                    |> Review.Test.run rule
+""", """module OtherSet exposing (..)
+
+type Set a =
+    Set a
+""" ]
+                    |> Review.Test.runOnModules rule
                     |> Review.Test.expectNoErrors
+        , test "should not report an error if an import exposes everything including the type we want to shorten (exposing explicitly)" <|
+            \() ->
+                [ """module A exposing (..)
+import Set
+import OtherSet exposing (..)
+a : Set.Set a
+a = Set.empty
+""", """module OtherSet exposing (Set)
+
+type Set a =
+    Set a
+""" ]
+                    |> Review.Test.runOnModules rule
+                    |> Review.Test.expectNoErrors
+        , test "should report an error if an import exposes everything but doesn't expose the type we want to shorten (exposing everything)" <|
+            \() ->
+                [ """module A exposing (..)
+import Set
+import SomethingElse exposing (..)
+a : Set.Set a
+a = Set.empty
+""", """module SomethingElse exposing (..)
+
+type NotSet a =
+    NotSet a
+""" ]
+                    |> Review.Test.runOnModules rule
+                    |> Review.Test.expect
+                        [ Review.Test.moduleErrors "A"
+                            [ Review.Test.error
+                                { message = message "Set"
+                                , details = details "Set"
+                                , under = "Set.Set"
+                                }
+                                |> Review.Test.whenFixed """module A exposing (..)
+import Set exposing (Set)
+import SomethingElse exposing (..)
+a : Set a
+a = Set.empty
+"""
+                            ]
+                        ]
+        , test "should report an error if an import exposes everything but doesn't expose the type we want to shorten (exposing explicitly)" <|
+            \() ->
+                [ """module A exposing (..)
+import Set
+import SomethingElse exposing (..)
+a : Set.Set a
+a = Set.empty
+""", """module SomethingElse exposing (NotSet)
+
+type NotSet a =
+    NotSet a
+""" ]
+                    |> Review.Test.runOnModules rule
+                    |> Review.Test.expect
+                        [ Review.Test.moduleErrors "A"
+                            [ Review.Test.error
+                                { message = message "Set"
+                                , details = details "Set"
+                                , under = "Set.Set"
+                                }
+                                |> Review.Test.whenFixed """module A exposing (..)
+import Set exposing (Set)
+import SomethingElse exposing (..)
+a : Set a
+a = Set.empty
+"""
+                            ]
+                        ]
         , test "should report an error if only the correct import exposes everything" <|
             \() ->
                 """module A exposing (..)
