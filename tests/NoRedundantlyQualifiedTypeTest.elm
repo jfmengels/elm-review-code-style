@@ -1,7 +1,13 @@
 module NoRedundantlyQualifiedTypeTest exposing (all)
 
+import Elm.Project
+import Elm.Type as Type
+import Json.Decode as Decode
 import NoRedundantlyQualifiedType exposing (rule)
+import Review.Project as Project
+import Review.Project.Dependency as Dependency exposing (Dependency)
 import Review.Test
+import Review.Test.Dependencies
 import Test exposing (Test, describe, test)
 
 
@@ -273,6 +279,46 @@ a = Set.empty
 """
                             ]
                         ]
+        , test "should not report an error if an import from a dependency exposes a custom type we want to shorten (exposing all)" <|
+            \() ->
+                """module A exposing (..)
+import Set
+import OtherSetType exposing (..)
+a : Set.Set a
+a = Set.empty
+"""
+                    |> Review.Test.runWithProjectData projectWithType rule
+                    |> Review.Test.expectNoErrors
+        , test "should not report an error if an import from a dependency exposes a type alias we want to shorten (exposing all)" <|
+            \() ->
+                """module A exposing (..)
+import Set
+import OtherSetTypeAlias exposing (..)
+a : Set.Set a
+a = Set.empty
+"""
+                    |> Review.Test.runWithProjectData projectWithType rule
+                    |> Review.Test.expectNoErrors
+        , test "should not report an error if an import from a dependency exposes a custom type we want to shorten (exposing explicitly)" <|
+            \() ->
+                """module A exposing (..)
+import Set
+import OtherSetType exposing (Set)
+a : Set.Set a
+a = Set.empty
+"""
+                    |> Review.Test.runWithProjectData projectWithType rule
+                    |> Review.Test.expectNoErrors
+        , test "should not report an error if an import from a dependency exposes a type alias we want to shorten (exposing explicitly)" <|
+            \() ->
+                """module A exposing (..)
+import Set
+import OtherSetTypeAlias exposing (Set)
+a : Set.Set a
+a = Set.empty
+"""
+                    |> Review.Test.runWithProjectData projectWithType rule
+                    |> Review.Test.expectNoErrors
         , test "should report an error if only the correct import exposes everything" <|
             \() ->
                 """module A exposing (..)
@@ -545,3 +591,91 @@ a = Set.empty
                             ]
             ]
         ]
+
+
+projectWithType : Project.Project
+projectWithType =
+    Review.Test.Dependencies.projectWithElmCore
+        |> Project.addElmJson (createElmJson elmJson)
+        |> Project.addDependency packageWithSet
+
+
+elmJson : String
+elmJson =
+    """
+{
+    "type": "application",
+    "source-directories": [
+        "src"
+    ],
+    "elm-version": "0.19.1",
+    "dependencies": {
+        "direct": {
+            "author/package-with-bar": "1.0.0",
+            "elm/core": "1.0.0"
+        },
+        "indirect": {}
+    },
+    "test-dependencies": {
+        "direct": {
+            "author/package-with-test-bar": "1.0.0"
+        },
+        "indirect": {}
+    }
+}"""
+
+
+packageWithSet : Dependency
+packageWithSet =
+    let
+        elmJson_ : { path : String, raw : String, project : Elm.Project.Project }
+        elmJson_ =
+            createElmJson """
+{
+  "type": "package",
+  "name": "author/package-with-set",
+  "summary": "Summary",
+  "license": "BSD-3-Clause",
+  "version": "1.0.0",
+  "exposed-modules": [
+      "OtherSetType",
+      "OtherSetTypeAlias"
+  ],
+  "elm-version": "0.19.0 <= v < 0.20.0",
+  "dependencies": {
+      "elm/core": "1.0.0 <= v < 2.0.0"
+  },
+  "test-dependencies": {}
+}"""
+    in
+    Dependency.create
+        "author/package-with-set"
+        elmJson_.project
+        [ { name = "OtherSetType"
+          , comment = ""
+          , unions = [ { name = "Set", args = [], comment = "", tags = [] } ]
+          , aliases = []
+          , values = []
+          , binops = []
+          }
+        , { name = "OtherSetTypeAlias"
+          , comment = ""
+          , unions = []
+          , aliases = [ { name = "Set", args = [], comment = "", tipe = Type.Record [] Nothing } ]
+          , values = []
+          , binops = []
+          }
+        ]
+
+
+createElmJson : String -> { path : String, raw : String, project : Elm.Project.Project }
+createElmJson rawElmJson =
+    case Decode.decodeString Elm.Project.decoder rawElmJson of
+        Ok elmJson_ ->
+            { path = "elm.json"
+            , raw = rawElmJson
+            , project = elmJson_
+            }
+
+        Err err ->
+            Debug.todo ("Invalid elm.json supplied to test: " ++ Debug.toString err)
