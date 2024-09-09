@@ -62,6 +62,26 @@ a : String
 a = ""
 """
                         ]
+        , test "should un-qualify a redundantly qualified type imported with an import alias" <|
+            \() ->
+                """module A exposing (..)
+import Some.Thing.Set as Set exposing (Set)
+a : Set.Set a
+a = Set.empty
+"""
+                    |> Review.Test.run rule
+                    |> Review.Test.expectErrors
+                        [ Review.Test.error
+                            { message = message "Set"
+                            , details = details "Set"
+                            , under = "Set.Set"
+                            }
+                            |> Review.Test.whenFixed """module A exposing (..)
+import Some.Thing.Set as Set exposing (Set)
+a : Set a
+a = Set.empty
+"""
+                        ]
         , test "should expose the type" <|
             \() ->
                 """module A exposing (..)
