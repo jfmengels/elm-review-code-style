@@ -4,7 +4,7 @@ import Elm.Project
 import Elm.Type as Type
 import Json.Decode as Decode
 import NoRedundantlyQualifiedType exposing (rule)
-import Review.Project as Project
+import Review.Project as Project exposing (Project)
 import Review.Project.Dependency as Dependency exposing (Dependency)
 import Review.Test
 import Review.Test.Dependencies
@@ -613,7 +613,7 @@ a = Set.empty
         ]
 
 
-projectWithType : Project.Project
+projectWithType : Project
 projectWithType =
     Review.Test.Dependencies.projectWithElmCore
         |> Project.addElmJson (createElmJson elmJson)

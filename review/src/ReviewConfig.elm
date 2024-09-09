@@ -25,6 +25,7 @@ import NoMissingTypeAnnotation
 import NoMissingTypeAnnotationInLetIn
 import NoMissingTypeExpose
 import NoPrematureLetComputation
+import NoRedundantlyQualifiedType
 import NoSimpleLetBody
 import NoUnnecessaryTrailingUnderscore
 import NoUnused.CustomTypeConstructorArgs
@@ -69,4 +70,5 @@ config =
     , CognitiveComplexity.rule 15
     , NoSimpleLetBody.rule
     , NoUnnecessaryTrailingUnderscore.rule
+    , NoRedundantlyQualifiedType.rule
     ]
