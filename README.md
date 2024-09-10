@@ -15,9 +15,9 @@ With that said, I recommend [trying them out](#try-it-out) to help you decide.
 
 ## Provided rules
 
-- [🔧 `NoRedundantlyQualifiedType`](https://package.elm-lang.org/packages/jfmengels/elm-review-code-style/1.1.4/NoRedundantlyQualifiedType) - Reports when a type is qualified by a module (alias) of the same name.
-- [🔧 `NoSimpleLetBody`](https://package.elm-lang.org/packages/jfmengels/elm-review-code-style/1.1.4/NoSimpleLetBody/ "Provides automatic fixes") - Reports when a let expression's body is a simple reference to a value declared in the let expression.
-- [🔧 `NoUnnecessaryTrailingUnderscore`](https://package.elm-lang.org/packages/jfmengels/elm-review-code-style/1.1.4/NoUnnecessaryTrailingUnderscore/ "Provides automatic fixes") - Reports unnecessary or suboptimal trailing underscores in variable names.
+- [🔧 `NoRedundantlyQualifiedType`](https://package.elm-lang.org/packages/jfmengels/elm-review-code-style/1.2.0/NoRedundantlyQualifiedType/) - Reports when a type is qualified by a module (alias) of the same name.
+- [🔧 `NoSimpleLetBody`](https://package.elm-lang.org/packages/jfmengels/elm-review-code-style/1.2.0/NoSimpleLetBody/ "Provides automatic fixes") - Reports when a let expression's body is a simple reference to a value declared in the let expression.
+- [🔧 `NoUnnecessaryTrailingUnderscore`](https://package.elm-lang.org/packages/jfmengels/elm-review-code-style/1.2.0/NoUnnecessaryTrailingUnderscore/ "Provides automatic fixes") - Reports unnecessary or suboptimal trailing underscores in variable names.
 
 
 ## Configuration

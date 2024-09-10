@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [1.2.0] - 2024-09-10
+
 - Added new [`NoRedundantlyQualifiedType`] rule. Thanks [@lydell](https://github.com/lydell)!
 - [`NoUnnecessaryTrailingUnderscore`] now doesn't report variables named `alias_`.
 
@@ -73,7 +75,8 @@ Help would be appreciated to fill the blanks!
 [`NoSimpleLetBody`]: (https://package.elm-lang.org/packages/jfmengels/elm-review-code-style/latest/NoSimpleLetBody)
 [`NoUnnecessaryTrailingUnderscore`]: (https://package.elm-lang.org/packages/jfmengels/elm-review-code-style/latest/NoUnnecessaryTrailingUnderscore)
 
-[Unreleased]: https://github.com/jfmengels/elm-review-code-style/compare/v1.1.3...HEAD
+[Unreleased]: https://github.com/jfmengels/elm-review-code-style/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/jfmengels/elm-review-code-style/releases/tag/1.2.0
 [1.1.3]: https://github.com/jfmengels/elm-review-code-style/releases/tag/1.1.3
 [1.1.2]: https://github.com/jfmengels/elm-review-code-style/releases/tag/1.1.2
 [1.1.1]: https://github.com/jfmengels/elm-review-code-style/releases/tag/1.1.1
