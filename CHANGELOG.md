@@ -77,6 +77,7 @@ Help would be appreciated to fill the blanks!
 
 [Unreleased]: https://github.com/jfmengels/elm-review-code-style/compare/v1.2.0...HEAD
 [1.2.0]: https://github.com/jfmengels/elm-review-code-style/releases/tag/1.2.0
+[1.1.4]: https://github.com/jfmengels/elm-review-code-style/releases/tag/1.1.4
 [1.1.3]: https://github.com/jfmengels/elm-review-code-style/releases/tag/1.1.3
 [1.1.2]: https://github.com/jfmengels/elm-review-code-style/releases/tag/1.1.2
 [1.1.1]: https://github.com/jfmengels/elm-review-code-style/releases/tag/1.1.1
