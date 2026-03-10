@@ -212,6 +212,23 @@ type Set a =
 """ ]
                     |> Review.Test.runOnModules rule
                     |> Review.Test.expectNoErrors
+        , test "should not report an error if an import alias can result in a constructor clash" <|
+            \() ->
+                [ """module A exposing (..)
+import Data.Book as Book
+import Page.Book as Book exposing (Params(..))
+getTitle : Params -> Book.Book -> String
+getTitle params book =
+    case params of
+        Book -> book.title
+        OldBook -> "Old"
+""", """module Data.Book exposing (Book)
+type alias Book = { title : String }
+""", """module Page.Book exposing (Params(..))
+type Params = Book | OldBook
+""" ]
+                    |> Review.Test.runOnModules rule
+                    |> Review.Test.expectNoErrors
         , test "should report an error if an import exposes everything but doesn't expose the type we want to shorten (exposing everything)" <|
             \() ->
                 [ """module A exposing (..)
