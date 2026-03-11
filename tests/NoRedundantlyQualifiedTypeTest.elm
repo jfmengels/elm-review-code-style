@@ -212,19 +212,19 @@ type Set a =
 """ ]
                     |> Review.Test.runOnModules rule
                     |> Review.Test.expectNoErrors
-        , test "should not report an error if an import alias can result in a constructor clash" <|
+        , test "should not report an error exposing a record type (and thus its constructor) results in a clash with another value with the same name" <|
             \() ->
                 [ """module A exposing (..)
-import Data.Book as Book
-import Page.Book as Book exposing (Params(..))
+import Book
+import Params exposing (Params(..))
 getTitle : Params -> Book.Book -> String
 getTitle params book =
     case params of
         Book -> book.title
         OldBook -> "Old"
-""", """module Data.Book exposing (Book)
+""", """module Book exposing (Book)
 type alias Book = { title : String }
-""", """module Page.Book exposing (Params(..))
+""", """module Params exposing (Params(..))
 type Params = Book | OldBook
 """ ]
                     |> Review.Test.runOnModules rule
