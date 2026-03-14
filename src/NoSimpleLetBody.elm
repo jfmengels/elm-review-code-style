@@ -193,7 +193,7 @@ checkPatternToFind constructorsToReport (Node _ expression) =
                 patternsToFind =
                     List.filterMap (checkPatternToFind constructorsToReport) elements
             in
-            if List.length patternsToFind == List.length elements then
+            if areLengthsEqual patternsToFind elements then
                 Just (TuplePattern patternsToFind)
 
             else
@@ -207,7 +207,7 @@ checkPatternToFind constructorsToReport (Node _ expression) =
                     patternsToFind =
                         List.filterMap (checkPatternToFind constructorsToReport) args
                 in
-                if List.length patternsToFind == List.length args then
+                if areLengthsEqual patternsToFind args then
                     Just (NamedPattern { moduleName = [], name = name } patternsToFind)
 
                 else
@@ -315,7 +315,7 @@ matchPatternToFind patternToFind (Node _ destructuringPattern) =
             False
 
         ( TuplePattern left, Pattern.TuplePattern right ) ->
-            (List.length left == List.length right)
+            areLengthsEqual left right
                 && map2ThenAll matchPatternToFind left right
 
         ( TuplePattern _, _ ) ->
@@ -328,6 +328,26 @@ matchPatternToFind patternToFind (Node _ destructuringPattern) =
 
         ( NamedPattern _ _, _ ) ->
             False
+
+
+areLengthsEqual : List a -> List b -> Bool
+areLengthsEqual left right =
+    case left of
+        [] ->
+            case right of
+                [] ->
+                    True
+
+                _ :: _ ->
+                    False
+
+        _ :: leftRest ->
+            case right of
+                [] ->
+                    False
+
+                _ :: rightRest ->
+                    areLengthsEqual leftRest rightRest
 
 
 map2ThenAll : (a -> b -> Bool) -> List a -> List b -> Bool
