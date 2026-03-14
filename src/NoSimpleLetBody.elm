@@ -316,9 +316,7 @@ matchPatternToFind patternToFind (Node _ destructuringPattern) =
 
         ( TuplePattern left, Pattern.TuplePattern right ) ->
             (List.length left == List.length right)
-                && (List.map2 matchPatternToFind left right
-                        |> List.all identity
-                   )
+                && map2ThenAll matchPatternToFind left right
 
         ( TuplePattern _, _ ) ->
             False
@@ -326,10 +324,16 @@ matchPatternToFind patternToFind (Node _ destructuringPattern) =
         ( NamedPattern refLeft argsLeft, Pattern.NamedPattern refRight argsRight ) ->
             -- TODO Is only safe when there are no value phantom types?
             (refLeft == refRight)
-                && (List.map2 matchPatternToFind argsLeft argsRight |> List.all identity)
+                && map2ThenAll matchPatternToFind argsLeft argsRight
 
         ( NamedPattern _ _, _ ) ->
             False
+
+
+map2ThenAll : (a -> b -> Bool) -> List a -> List b -> Bool
+map2ThenAll fn left right =
+    List.map2 fn left right
+        |> List.all identity
 
 
 createResolution : Range -> { hasArguments : Bool, expressionRange : Range } -> { lastEnd : Maybe Location, previousEnd : Maybe Location } -> Bool -> Resolution
