@@ -315,8 +315,7 @@ matchPatternToFind patternToFind (Node _ destructuringPattern) =
             False
 
         ( TuplePattern left, Pattern.TuplePattern right ) ->
-            areLengthsEqual left right
-                && map2ThenAll matchPatternToFind left right
+            map2ThenAll matchPatternToFind left right
 
         ( TuplePattern _, _ ) ->
             False
