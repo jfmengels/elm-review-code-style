@@ -111,30 +111,28 @@ declarationListVisitor declarations context =
     let
         constructorsToReport : Set String
         constructorsToReport =
-            declarations
-                |> List.filterMap safelyDestructurableConstructor
-                |> Set.fromList
+            List.foldl safelyDestructurableConstructor Set.empty declarations
     in
     ( [], { context | constructorsToReport = constructorsToReport } )
 
 
-safelyDestructurableConstructor : Node Declaration -> Maybe String
-safelyDestructurableConstructor node =
-    case Node.value node of
+safelyDestructurableConstructor : Node Declaration -> Set String -> Set String
+safelyDestructurableConstructor (Node _ node) acc =
+    case node of
         Declaration.CustomTypeDeclaration { generics, constructors } ->
             if List.isEmpty generics then
                 case constructors of
-                    [ constructor ] ->
-                        Just (Node.value constructor |> .name |> Node.value)
+                    [ Node _ { name } ] ->
+                        Set.insert (Node.value name) acc
 
                     _ ->
-                        Nothing
+                        acc
 
             else
-                Nothing
+                acc
 
         _ ->
-            Nothing
+            acc
 
 
 expressionVisitor : Node Expression -> Context -> ( List (Rule.Error {}), Context )
