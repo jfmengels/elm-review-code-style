@@ -332,8 +332,26 @@ matchPatternToFind patternToFind (Node _ destructuringPattern) =
 
 map2ThenAll : (a -> b -> Bool) -> List a -> List b -> Bool
 map2ThenAll fn left right =
-    List.map2 fn left right
-        |> List.all identity
+    case left of
+        [] ->
+            case right of
+                [] ->
+                    True
+
+                _ ->
+                    False
+
+        leftFirst :: leftRest ->
+            case right of
+                [] ->
+                    False
+
+                rightFirst :: rightRest ->
+                    if fn leftFirst rightFirst then
+                        map2ThenAll fn leftRest rightRest
+
+                    else
+                        False
 
 
 createResolution : Range -> { hasArguments : Bool, expressionRange : Range } -> { lastEnd : Maybe Location, previousEnd : Maybe Location } -> Bool -> Resolution
