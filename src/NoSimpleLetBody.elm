@@ -136,10 +136,10 @@ safelyDestructurableConstructor (Node _ node) acc =
 
 
 expressionVisitor : Node Expression -> Context -> ( List (Rule.Error {}), Context )
-expressionVisitor node context =
-    case Node.value node of
+expressionVisitor (Node range expr) context =
+    case expr of
         Expression.LetExpression letBlock ->
-            ( visitLetExpression context (Node.range node) letBlock, context )
+            ( visitLetExpression context range letBlock, context )
 
         _ ->
             ( [], context )
@@ -156,6 +156,10 @@ visitLetExpression { extractSourceCode, constructorsToReport } nodeRange { decla
             in
             case maybeResolution of
                 Just resolution ->
+                    let
+                        (Node range _) =
+                            expression
+                    in
                     [ Rule.errorWithFix
                         { message = "The referenced value should be inlined."
                         , details =
@@ -163,8 +167,8 @@ visitLetExpression { extractSourceCode, constructorsToReport } nodeRange { decla
                             , "If you believe that the expression needs a name because it is too complex, consider splitting the expression up more or extracting it to a new function."
                             ]
                         }
-                        (Node.range expression)
-                        (fix extractSourceCode nodeRange (Node.range expression) resolution)
+                        range
+                        (fix extractSourceCode nodeRange range resolution)
                     ]
 
                 Nothing ->
@@ -175,8 +179,8 @@ visitLetExpression { extractSourceCode, constructorsToReport } nodeRange { decla
 
 
 checkPatternToFind : Set String -> Node Expression -> Maybe PatternToFind
-checkPatternToFind constructorsToReport expression =
-    case Node.value expression of
+checkPatternToFind constructorsToReport (Node _ expression) =
+    case expression of
         Expression.ParenthesizedExpression expr ->
             checkPatternToFind constructorsToReport expr
 
@@ -247,12 +251,12 @@ findDeclarationToMoveHelp patternToFind nbOfDeclarations declarations { index, p
         [] ->
             Nothing
 
-        declaration :: rest ->
+        (Node declarationRange declaration) :: rest ->
             case match declaration patternToFind of
                 Just matchParams ->
                     Just
                         (createResolution
-                            declaration
+                            declarationRange
                             matchParams
                             { lastEnd = lastEnd, previousEnd = previousEnd }
                             (index == nbOfDeclarations - 1)
@@ -265,13 +269,13 @@ findDeclarationToMoveHelp patternToFind nbOfDeclarations declarations { index, p
                         rest
                         { index = index + 1
                         , previousEnd = lastEnd
-                        , lastEnd = Just (Node.range declaration).end
+                        , lastEnd = Just declarationRange.end
                         }
 
 
-match : Node Expression.LetDeclaration -> PatternToFind -> Maybe { hasArguments : Bool, expressionRange : Range }
+match : Expression.LetDeclaration -> PatternToFind -> Maybe { hasArguments : Bool, expressionRange : Range }
 match declaration patternToFind =
-    case Node.value declaration of
+    case declaration of
         Expression.LetFunction function ->
             let
                 functionDeclaration : Expression.FunctionImplementation
@@ -287,11 +291,11 @@ match declaration patternToFind =
             else
                 Nothing
 
-        Expression.LetDestructuring destructuringPattern expression ->
+        Expression.LetDestructuring destructuringPattern (Node expressionRange _) ->
             if matchPatternToFind patternToFind destructuringPattern then
                 Just
                     { hasArguments = False
-                    , expressionRange = Node.range expression
+                    , expressionRange = expressionRange
                     }
 
             else
@@ -299,8 +303,8 @@ match declaration patternToFind =
 
 
 matchPatternToFind : PatternToFind -> Node Pattern -> Bool
-matchPatternToFind patternToFind destructuringPattern =
-    case ( patternToFind, Node.value destructuringPattern ) of
+matchPatternToFind patternToFind (Node _ destructuringPattern) =
+    case ( patternToFind, destructuringPattern ) of
         ( _, Pattern.ParenthesizedPattern pattern ) ->
             matchPatternToFind patternToFind pattern
 
@@ -328,8 +332,8 @@ matchPatternToFind patternToFind destructuringPattern =
             False
 
 
-createResolution : Node a -> { hasArguments : Bool, expressionRange : Range } -> { lastEnd : Maybe Location, previousEnd : Maybe Location } -> Bool -> Resolution
-createResolution declaration { hasArguments, expressionRange } { lastEnd, previousEnd } isLast =
+createResolution : Range -> { hasArguments : Bool, expressionRange : Range } -> { lastEnd : Maybe Location, previousEnd : Maybe Location } -> Bool -> Resolution
+createResolution declarationRange { hasArguments, expressionRange } { lastEnd, previousEnd } isLast =
     if hasArguments then
         ReportNoFix
 
@@ -344,8 +348,8 @@ createResolution declaration { hasArguments, expressionRange } { lastEnd, previo
             ( Just _, False ) ->
                 Move
                     { toRemove =
-                        { start = Maybe.withDefault (Node.range declaration).start previousEnd
-                        , end = (Node.range declaration).end
+                        { start = Maybe.withDefault declarationRange.start previousEnd
+                        , end = declarationRange.end
                         }
                     , toCopy = expressionRange
                     }
@@ -356,8 +360,8 @@ createResolution declaration { hasArguments, expressionRange } { lastEnd, previo
             ( Nothing, False ) ->
                 Move
                     { toRemove =
-                        { start = Maybe.withDefault (Node.range declaration).start previousEnd
-                        , end = (Node.range declaration).end
+                        { start = Maybe.withDefault declarationRange.start previousEnd
+                        , end = declarationRange.end
                         }
                     , toCopy = expressionRange
                     }
