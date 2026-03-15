@@ -593,8 +593,7 @@ reportErrorsForLet letExpression namesFromLetDeclarations scopes declarations in
                                 |> List.map (\var -> ( var.name, [] ))
                                 |> Dict.fromList
                     in
-                    List.filterMap (error letExpression namesFromLetDeclarations (addNewScope names scopes)) declaredVariables
-                        ++ errors
+                    filterMapWithInitial (error letExpression namesFromLetDeclarations (addNewScope names scopes)) declaredVariables errors
         )
         initialErrors
         declarations
@@ -903,3 +902,18 @@ importedFromBasics =
 mapAppend : (a -> b) -> List a -> List b -> List b
 mapAppend fn list initial =
     List.foldl (\a acc -> fn a :: acc) initial list
+
+
+filterMapWithInitial : (a -> Maybe b) -> List a -> List b -> List b
+filterMapWithInitial fn list initial =
+    List.foldl
+        (\a acc ->
+            case fn a of
+                Just b ->
+                    b :: acc
+
+                Nothing ->
+                    acc
+        )
+        initial
+        list
