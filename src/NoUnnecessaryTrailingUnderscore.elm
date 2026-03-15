@@ -570,9 +570,7 @@ reportErrorsForLet letExpression namesFromLetDeclarations scopes declarations in
 
                         names : Scope
                         names =
-                            declaredVariables
-                                |> List.map (\var -> var.name)
-                                |> Set.fromList
+                            List.foldl (\var set -> Set.insert var.name set) Set.empty declaredVariables
                     in
                     filterMapWithInitial (error letExpression namesFromLetDeclarations (addNewScope names scopes)) declaredVariables errors
         )
@@ -629,9 +627,7 @@ report patternsAndBody context =
 
                         names : Scope
                         names =
-                            declaredVariables
-                                |> List.map (\var -> var.name)
-                                |> Set.fromList
+                            List.foldl (\var set -> Set.insert var.name set) Set.empty declaredVariables
                     in
                     { errors = filterMapWithInitial (error expression Set.empty (addNewScope names context.scopes)) declaredVariables acc.errors
                     , scopesToAdd = ( Node.range expression, names ) :: acc.scopesToAdd
