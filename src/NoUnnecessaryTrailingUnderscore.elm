@@ -360,20 +360,11 @@ declarationVisitor (Node _ node) context =
     case node of
         Declaration.FunctionDeclaration function ->
             let
-                arguments : List (Node Pattern)
-                arguments =
-                    function.declaration
-                        |> Node.value
-                        |> .arguments
-
-                body : Node Expression
-                body =
-                    function.declaration
-                        |> Node.value
-                        |> .expression
+                { arguments, expression } =
+                    Node.value function.declaration
             in
             report
-                [ ( arguments, body ) ]
+                [ ( arguments, expression ) ]
                 context
 
         _ ->
