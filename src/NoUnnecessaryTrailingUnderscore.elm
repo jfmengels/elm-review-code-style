@@ -268,8 +268,8 @@ importVisitor (Node _ import_) context =
                 namesToAdd : Scope
                 namesToAdd =
                     List.filterMap
-                        (\node ->
-                            case Node.value node of
+                        (\(Node _ node) ->
+                            case node of
                                 Exposing.FunctionExpose name ->
                                     Just ( name, [] )
 
@@ -309,8 +309,8 @@ declarationListVisitor declarations context =
         namesToAdd : Scope
         namesToAdd =
             List.filterMap
-                (\node ->
-                    case Node.value node of
+                (\(Node _ node) ->
+                    case node of
                         Declaration.FunctionDeclaration function ->
                             Just
                                 ( function.declaration
@@ -329,8 +329,8 @@ declarationListVisitor declarations context =
         errors : List (Rule.Error {})
         errors =
             List.filterMap
-                (\node ->
-                    case Node.value node of
+                (\(Node _ node) ->
+                    case node of
                         Declaration.FunctionDeclaration function ->
                             reportTopLevelFunction context.scopes function
 
@@ -356,8 +356,8 @@ mergeScopeDicts scopeA scopeB =
 
 
 declarationVisitor : Node Declaration -> ModuleContext -> ( List (Rule.Error {}), ModuleContext )
-declarationVisitor node context =
-    case Node.value node of
+declarationVisitor (Node _ node) context =
+    case node of
         Declaration.FunctionDeclaration function ->
             let
                 arguments : List (Node Pattern)
