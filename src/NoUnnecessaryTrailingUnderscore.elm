@@ -548,22 +548,16 @@ reportErrorsForLet letExpression namesFromLetDeclarations scopes declarations in
                                 |> Node.value
                                 |> .name
                     in
-                    case
-                        error
-                            letExpression
-                            namesFromLetDeclarations
-                            scopes
-                            { name = name
-                            , range = range
-                            , signatureRange = Maybe.map (\(Node _ signature) -> Node.range signature.name) function.signature
-                            , origin = NotFromRecord
-                            }
-                    of
-                        Just newError ->
-                            newError :: errors
-
-                        Nothing ->
-                            errors
+                    error
+                        letExpression
+                        namesFromLetDeclarations
+                        scopes
+                        { name = name
+                        , range = range
+                        , signatureRange = Maybe.map (\(Node _ signature) -> Node.range signature.name) function.signature
+                        , origin = NotFromRecord
+                        }
+                        errors
 
                 Expression.LetDestructuring pattern _ ->
                     let
@@ -575,7 +569,7 @@ reportErrorsForLet letExpression namesFromLetDeclarations scopes declarations in
                         names =
                             List.foldl (\var set -> Set.insert var.name set) Set.empty declaredVariables
                     in
-                    filterMapWithInitial (error letExpression namesFromLetDeclarations (addNewScope names scopes)) declaredVariables errors
+                    List.foldl (error letExpression namesFromLetDeclarations (addNewScope names scopes)) errors declaredVariables
         )
         initialErrors
         declarations
@@ -632,7 +626,7 @@ report patternsAndBody context =
                         names =
                             List.foldl (\var set -> Set.insert var.name set) Set.empty declaredVariables
                     in
-                    { errors = filterMapWithInitial (error expression Set.empty (addNewScope names context.scopes)) declaredVariables acc.errors
+                    { errors = List.foldl (error expression Set.empty (addNewScope names context.scopes)) acc.errors declaredVariables
                     , scopesToAdd = ( Node.range expression, names ) :: acc.scopesToAdd
                     }
                 )
@@ -661,8 +655,8 @@ popScope ( head, tail ) =
             ( newHead, newTail )
 
 
-error : Node Expression -> Scope -> Scopes -> ScopeNames -> Maybe (Rule.Error {})
-error expressionToReplaceThingsIn namesOnTheSameLevel scopes { range, name, signatureRange, origin } =
+error : Node Expression -> Scope -> Scopes -> ScopeNames -> List (Rule.Error {}) -> List (Rule.Error {})
+error expressionToReplaceThingsIn namesOnTheSameLevel scopes { range, name, signatureRange, origin } errors =
     let
         nameWithoutUnderscore : String
         nameWithoutUnderscore =
@@ -675,33 +669,31 @@ error expressionToReplaceThingsIn namesOnTheSameLevel scopes { range, name, sign
             && shouldNameBeReported origin
     then
         if Set.member nameWithoutUnderscore namesOnTheSameLevel then
-            Just
-                (Rule.error
-                    { message = name ++ " should not end with an underscore"
-                    , details =
-                        [ "It seems that it has been used to prevent shadowing issues with a variable on the same level, but this is confusing. When should \"" ++ name ++ "\" be used and when should \"" ++ nameWithoutUnderscore ++ "\" be used?"
-                        , "Please rename this variable in a way that makes it more explicit when or how each should be used."
-                        ]
-                    }
-                    range
-                )
+            Rule.error
+                { message = name ++ " should not end with an underscore"
+                , details =
+                    [ "It seems that it has been used to prevent shadowing issues with a variable on the same level, but this is confusing. When should \"" ++ name ++ "\" be used and when should \"" ++ nameWithoutUnderscore ++ "\" be used?"
+                    , "Please rename this variable in a way that makes it more explicit when or how each should be used."
+                    ]
+                }
+                range
+                :: errors
 
         else
-            Just
-                (Rule.errorWithFix
-                    (defaultErrorAndMessage name)
-                    range
-                    (case findUsages name nameWithoutUnderscore [ expressionToReplaceThingsIn ] [] of
-                        Just usages ->
-                            List.map removeLastCharacter (addMaybe signatureRange (range :: usages))
+            Rule.errorWithFix
+                (defaultErrorAndMessage name)
+                range
+                (case findUsages name nameWithoutUnderscore [ expressionToReplaceThingsIn ] [] of
+                    Just usages ->
+                        List.map removeLastCharacter (addMaybe signatureRange (range :: usages))
 
-                        Nothing ->
-                            []
-                    )
+                    Nothing ->
+                        []
                 )
+                :: errors
 
     else
-        Nothing
+        errors
 
 
 addMaybe : Maybe a -> List a -> List a
@@ -868,18 +860,3 @@ importedFromBasics =
 mapAppend : (a -> b) -> List a -> List b -> List b
 mapAppend fn list initial =
     List.foldl (\a acc -> fn a :: acc) initial list
-
-
-filterMapWithInitial : (a -> Maybe b) -> List a -> List b -> List b
-filterMapWithInitial fn list initial =
-    List.foldl
-        (\a acc ->
-            case fn a of
-                Just b ->
-                    b :: acc
-
-                Nothing ->
-                    acc
-        )
-        initial
-        list
