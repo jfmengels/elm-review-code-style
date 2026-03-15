@@ -305,24 +305,28 @@ importVisitor (Node _ import_) context =
 declarationListVisitor : List (Node Declaration) -> ModuleContext -> ( List (Rule.Error {}), ModuleContext )
 declarationListVisitor declarations context =
     let
-        namesToAdd : Scope
-        namesToAdd =
-            List.filterMap
-                (\(Node _ node) ->
+        ( scope, rest ) =
+            context.scopes
+
+        newScope : Scope
+        newScope =
+            List.foldl
+                (\(Node _ node) set ->
                     case node of
                         Declaration.FunctionDeclaration function ->
-                            Just
+                            Set.insert
                                 (function.declaration
                                     |> Node.value
                                     |> .name
                                     |> Node.value
                                 )
+                                set
 
                         _ ->
-                            Nothing
+                            set
                 )
+                scope
                 declarations
-                |> Set.fromList
 
         errors : List (Rule.Error {})
         errors =
@@ -338,7 +342,7 @@ declarationListVisitor declarations context =
                 declarations
     in
     ( errors
-    , { context | scopes = Tuple.mapFirst (Set.union namesToAdd) context.scopes }
+    , { context | scopes = ( newScope, rest ) }
     )
 
 
