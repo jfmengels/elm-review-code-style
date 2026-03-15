@@ -508,7 +508,7 @@ expressionVisitorHelp node context =
                         )
                         { context | scopes = addNewScope namesFromLetDeclarations context.scopes }
             in
-            ( reportErrorsForLet node namesFromLetDeclarations context.scopes declarations ++ errors
+            ( reportErrorsForLet node namesFromLetDeclarations context.scopes declarations errors
             , { newContext
                 | scopesToAdd =
                     Dict.insert
@@ -551,11 +551,11 @@ getNamesFromLetDeclarations declarations =
         declarations
 
 
-reportErrorsForLet : Node Expression -> Scope -> Scopes -> List (Node Expression.LetDeclaration) -> List (Rule.Error {})
-reportErrorsForLet letExpression namesFromLetDeclarations scopes declarations =
-    List.concatMap
-        (\node ->
-            case Node.value node of
+reportErrorsForLet : Node Expression -> Scope -> Scopes -> List (Node Expression.LetDeclaration) -> List (Rule.Error {}) -> List (Rule.Error {})
+reportErrorsForLet letExpression namesFromLetDeclarations scopes declarations initialErrors =
+    List.foldl
+        (\(Node _ node) errors ->
+            case node of
                 Expression.LetFunction function ->
                     let
                         functionName : Node String
@@ -576,10 +576,10 @@ reportErrorsForLet letExpression namesFromLetDeclarations scopes declarations =
                             }
                     of
                         Just newError ->
-                            [ newError ]
+                            newError :: errors
 
                         Nothing ->
-                            []
+                            errors
 
                 Expression.LetDestructuring pattern _ ->
                     let
@@ -594,7 +594,9 @@ reportErrorsForLet letExpression namesFromLetDeclarations scopes declarations =
                                 |> Dict.fromList
                     in
                     List.filterMap (error letExpression namesFromLetDeclarations (addNewScope names scopes)) declaredVariables
+                        ++ errors
         )
+        initialErrors
         declarations
 
 
@@ -759,10 +761,10 @@ findUsages targetName intendedName remainingNodes acc =
 
                 Expression.RecordUpdateExpression (Node nameRange name) nodes ->
                     if name == targetName then
-                        findUsages targetName intendedName (List.map (Node.value >> Tuple.second) nodes ++ rest) (nameRange :: acc)
+                        findUsages targetName intendedName (mapAppend (Node.value >> Tuple.second) nodes rest) (nameRange :: acc)
 
                     else
-                        findUsages targetName intendedName (List.map (Node.value >> Tuple.second) nodes ++ rest) acc
+                        findUsages targetName intendedName (mapAppend (Node.value >> Tuple.second) nodes rest) acc
 
                 Expression.Application nodes ->
                     findUsages targetName intendedName (nodes ++ rest) acc
@@ -783,16 +785,16 @@ findUsages targetName intendedName remainingNodes acc =
                     findUsages targetName intendedName (expr :: rest) acc
 
                 Expression.LetExpression letBlock ->
-                    findUsages targetName intendedName (letBlock.expression :: (List.map extractExpression letBlock.declarations ++ rest)) acc
+                    findUsages targetName intendedName (letBlock.expression :: mapAppend extractExpression letBlock.declarations rest) acc
 
                 Expression.CaseExpression caseBlock ->
-                    findUsages targetName intendedName (caseBlock.expression :: (List.map Tuple.second caseBlock.cases ++ rest)) acc
+                    findUsages targetName intendedName (caseBlock.expression :: mapAppend Tuple.second caseBlock.cases rest) acc
 
                 Expression.LambdaExpression lambda ->
                     findUsages targetName intendedName (lambda.expression :: rest) acc
 
                 Expression.RecordExpr nodes ->
-                    findUsages targetName intendedName (List.map (Node.value >> Tuple.second) nodes ++ rest) acc
+                    findUsages targetName intendedName (mapAppend (Node.value >> Tuple.second) nodes rest) acc
 
                 Expression.ListExpr nodes ->
                     findUsages targetName intendedName (nodes ++ rest) acc
@@ -896,3 +898,8 @@ importedFromBasics =
     , "never"
     ]
         |> List.foldl (\name dict -> Dict.insert name [] dict) Dict.empty
+
+
+mapAppend : (a -> b) -> List a -> List b -> List b
+mapAppend fn list initial =
+    List.foldl (\a acc -> fn a :: acc) initial list
