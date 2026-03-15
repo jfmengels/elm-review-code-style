@@ -614,10 +614,9 @@ reportTopLevelFunction scopes function =
 report : List ( List (Node Pattern), Node Expression ) -> ModuleContext -> ( List (Rule.Error {}), ModuleContext )
 report patternsAndBody context =
     let
-        scopesToAdd : List { errors : List (Rule.Error {}), scopesToAdd : ( RangeLike, Scope ) }
-        scopesToAdd =
-            List.map
-                (\( patterns, expression ) ->
+        { errors, scopesToAdd } =
+            List.foldr
+                (\( patterns, expression ) acc ->
                     let
                         declaredVariables : List ScopeNames
                         declaredVariables =
@@ -629,22 +628,17 @@ report patternsAndBody context =
                                 |> List.map (\var -> var.name)
                                 |> Set.fromList
                     in
-                    { errors = List.filterMap (error expression Set.empty (addNewScope names context.scopes)) declaredVariables
-                    , scopesToAdd =
-                        ( rangeToRangeLike (Node.range expression)
-                        , names
-                        )
+                    { errors = filterMapWithInitial (error expression Set.empty (addNewScope names context.scopes)) declaredVariables acc.errors
+                    , scopesToAdd = Dict.insert (rangeToRangeLike (Node.range expression)) names acc.scopesToAdd
                     }
                 )
+                { errors = []
+                , scopesToAdd = context.scopesToAdd
+                }
                 patternsAndBody
     in
-    ( List.concatMap .errors scopesToAdd
-    , { context
-        | scopesToAdd =
-            Dict.union
-                (scopesToAdd |> List.map .scopesToAdd |> Dict.fromList)
-                context.scopesToAdd
-      }
+    ( errors
+    , { context | scopesToAdd = scopesToAdd }
     )
 
 
