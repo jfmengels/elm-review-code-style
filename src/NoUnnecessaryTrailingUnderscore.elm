@@ -467,11 +467,11 @@ expressionVisitorHelp node context =
                 [ ( args, expression ) ]
                 context
 
-        Expression.LetExpression { declarations, expression } ->
+        Expression.LetExpression let_ ->
             let
                 namesFromLetDeclarations : Scope
                 namesFromLetDeclarations =
-                    getNamesFromLetDeclarations declarations
+                    getNamesFromLetDeclarations let_.declarations
 
                 ( errors, newContext ) =
                     report
@@ -480,27 +480,23 @@ expressionVisitorHelp node context =
                                 case declaration of
                                     Expression.LetFunction function ->
                                         let
-                                            functionImplementation : Expression.FunctionImplementation
-                                            functionImplementation =
+                                            { arguments, expression } =
                                                 Node.value function.declaration
                                         in
-                                        [ ( functionImplementation.arguments
-                                          , functionImplementation.expression
-                                          )
-                                        ]
+                                        [ ( arguments, expression ) ]
 
                                     Expression.LetDestructuring _ _ ->
                                         []
                             )
-                            declarations
+                            let_.declarations
                         )
                         { context | scopes = addNewScope namesFromLetDeclarations context.scopes }
             in
-            ( reportErrorsForLet node namesFromLetDeclarations context.scopes declarations errors
+            ( reportErrorsForLet node namesFromLetDeclarations context.scopes let_.declarations errors
             , { newContext
                 | scopesToAdd =
                     Dict.insert
-                        (rangeToRangeLike (Node.range expression))
+                        (rangeToRangeLike (Node.range let_.expression))
                         namesFromLetDeclarations
                         newContext.scopesToAdd
               }
