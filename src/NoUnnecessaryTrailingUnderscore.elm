@@ -543,8 +543,7 @@ getNamesFromLetDeclarations declarations =
                     ]
 
                 Expression.LetDestructuring pattern _ ->
-                    List.map .name (getDeclaredVariableNames pattern)
-                        |> List.map (\name -> ( name, [] ))
+                    List.map (\{ name } -> ( name, [] )) (getDeclaredVariableNames pattern)
         )
         declarations
         |> Dict.fromList
