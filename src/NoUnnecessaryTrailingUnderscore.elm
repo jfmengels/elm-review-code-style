@@ -265,35 +265,32 @@ importVisitor (Node _ import_) context =
     case Maybe.map Node.value import_.exposingList of
         Just (Exposing.Explicit list) ->
             let
-                namesToAdd : Scope
-                namesToAdd =
-                    List.filterMap
-                        (\(Node _ node) ->
+                ( scope, rest ) =
+                    context.scopes
+
+                newScope : Scope
+                newScope =
+                    List.foldl
+                        (\(Node _ node) set ->
                             case node of
                                 Exposing.FunctionExpose name ->
-                                    Just name
+                                    Set.insert name set
 
                                 _ ->
-                                    Nothing
+                                    set
                         )
+                        scope
                         list
-                        |> Set.fromList
             in
             ( []
-            , { context | scopes = Tuple.mapFirst (\scope -> Set.union namesToAdd scope) context.scopes }
+            , { context | scopes = ( newScope, rest ) }
             )
 
         Just (Exposing.All _) ->
             case Dict.get (Node.value import_.moduleName) context.exposedFunctionsFromModule of
                 Just names ->
-                    let
-                        namesToAdd : Scope
-                        namesToAdd =
-                            List.map (\valueName -> valueName) names
-                                |> Set.fromList
-                    in
                     ( []
-                    , { context | scopes = Tuple.mapFirst (\scope -> Set.union namesToAdd scope) context.scopes }
+                    , { context | scopes = Tuple.mapFirst (\scope -> List.foldl Set.insert scope names) context.scopes }
                     )
 
                 Nothing ->
