@@ -524,20 +524,19 @@ expressionVisitorHelp node context =
 getNamesFromLetDeclarations : List (Node Expression.LetDeclaration) -> Scope
 getNamesFromLetDeclarations declarations =
     List.concatMap
-        (\declaration ->
-            case Node.value declaration of
+        (\(Node _ declaration) ->
+            case declaration of
                 Expression.LetFunction function ->
                     let
-                        name : Node String
-                        name =
+                        (Node range name) =
                             function.declaration
                                 |> Node.value
                                 |> .name
                     in
-                    [ ( Node.value name
+                    [ ( name
                       , List.filterMap
                             identity
-                            [ Just (Node.range name)
+                            [ Just range
                             , Maybe.map (Node.value >> .name >> Node.range) function.signature
                             ]
                       )
