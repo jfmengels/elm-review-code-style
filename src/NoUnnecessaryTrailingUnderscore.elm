@@ -895,5 +895,4 @@ importedFromBasics =
     , "always"
     , "never"
     ]
-        |> List.map (\name -> ( name, [] ))
-        |> Dict.fromList
+        |> List.foldl (\name dict -> Dict.insert name [] dict) Dict.empty
