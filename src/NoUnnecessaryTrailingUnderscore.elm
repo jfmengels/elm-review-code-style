@@ -845,7 +845,8 @@ shouldNameBeReported origin =
 
 isDefinedInScope : Scopes -> String -> Bool
 isDefinedInScope ( top, rest ) name =
-    List.any (Dict.member name) (top :: rest)
+    Dict.member name top
+        || List.any (Dict.member name) rest
 
 
 rangeToRangeLike : Range -> RangeLike
