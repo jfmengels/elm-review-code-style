@@ -204,7 +204,7 @@ type alias Scopes =
 
 
 type alias Scope =
-    Dict String (List Range)
+    Set String
 
 
 type alias RangeLike =
@@ -271,16 +271,16 @@ importVisitor (Node _ import_) context =
                         (\(Node _ node) ->
                             case node of
                                 Exposing.FunctionExpose name ->
-                                    Just ( name, [] )
+                                    Just name
 
                                 _ ->
                                     Nothing
                         )
                         list
-                        |> Dict.fromList
+                        |> Set.fromList
             in
             ( []
-            , { context | scopes = Tuple.mapFirst (mergeScopeDicts namesToAdd) context.scopes }
+            , { context | scopes = Tuple.mapFirst (\scope -> Set.union namesToAdd scope) context.scopes }
             )
 
         Just (Exposing.All _) ->
@@ -289,11 +289,11 @@ importVisitor (Node _ import_) context =
                     let
                         namesToAdd : Scope
                         namesToAdd =
-                            List.map (\valueName -> ( valueName, [] )) names
-                                |> Dict.fromList
+                            List.map (\valueName -> valueName) names
+                                |> Set.fromList
                     in
                     ( []
-                    , { context | scopes = Tuple.mapFirst (mergeScopeDicts namesToAdd) context.scopes }
+                    , { context | scopes = Tuple.mapFirst (\scope -> Set.union namesToAdd scope) context.scopes }
                     )
 
                 Nothing ->
@@ -313,18 +313,17 @@ declarationListVisitor declarations context =
                     case node of
                         Declaration.FunctionDeclaration function ->
                             Just
-                                ( function.declaration
+                                (function.declaration
                                     |> Node.value
                                     |> .name
                                     |> Node.value
-                                , []
                                 )
 
                         _ ->
                             Nothing
                 )
                 declarations
-                |> Dict.fromList
+                |> Set.fromList
 
         errors : List (Rule.Error {})
         errors =
@@ -340,19 +339,8 @@ declarationListVisitor declarations context =
                 declarations
     in
     ( errors
-    , { context | scopes = Tuple.mapFirst (mergeScopeDicts namesToAdd) context.scopes }
+    , { context | scopes = Tuple.mapFirst (Set.union namesToAdd) context.scopes }
     )
-
-
-mergeScopeDicts : Scope -> Scope -> Scope
-mergeScopeDicts scopeA scopeB =
-    Dict.merge
-        Dict.insert
-        (\key valuesA valuesB -> Dict.insert key (valuesA ++ valuesB))
-        Dict.insert
-        scopeA
-        scopeB
-        Dict.empty
 
 
 declarationVisitor : Node Declaration -> ModuleContext -> ( List (Rule.Error {}), ModuleContext )
@@ -524,29 +512,21 @@ expressionVisitorHelp node context =
 getNamesFromLetDeclarations : List (Node Expression.LetDeclaration) -> Scope
 getNamesFromLetDeclarations declarations =
     List.foldl
-        (\(Node _ declaration) dict ->
+        (\(Node _ declaration) set ->
             case declaration of
                 Expression.LetFunction function ->
                     let
-                        (Node range name) =
+                        (Node _ name) =
                             function.declaration
                                 |> Node.value
                                 |> .name
                     in
-                    Dict.insert
-                        name
-                        (List.filterMap
-                            identity
-                            [ Just range
-                            , Maybe.map (Node.value >> .name >> Node.range) function.signature
-                            ]
-                        )
-                        dict
+                    Set.insert name set
 
                 Expression.LetDestructuring pattern _ ->
-                    List.foldl (\{ name } acc -> Dict.insert name [] acc) dict (getDeclaredVariableNames pattern)
+                    List.foldl (\{ name } acc -> Set.insert name acc) set (getDeclaredVariableNames pattern)
         )
-        Dict.empty
+        Set.empty
         declarations
 
 
@@ -589,8 +569,8 @@ reportErrorsForLet letExpression namesFromLetDeclarations scopes declarations in
                         names : Scope
                         names =
                             declaredVariables
-                                |> List.map (\var -> ( var.name, [] ))
-                                |> Dict.fromList
+                                |> List.map (\var -> var.name)
+                                |> Set.fromList
                     in
                     filterMapWithInitial (error letExpression namesFromLetDeclarations (addNewScope names scopes)) declaredVariables errors
         )
@@ -649,10 +629,10 @@ report patternsAndBody context =
                         names : Scope
                         names =
                             declaredVariables
-                                |> List.map (\var -> ( var.name, [] ))
-                                |> Dict.fromList
+                                |> List.map (\var -> var.name)
+                                |> Set.fromList
                     in
-                    { errors = List.filterMap (error expression Dict.empty (addNewScope names context.scopes)) declaredVariables
+                    { errors = List.filterMap (error expression Set.empty (addNewScope names context.scopes)) declaredVariables
                     , scopesToAdd =
                         ( rangeToRangeLike (Node.range expression)
                         , names
@@ -699,7 +679,7 @@ error expressionToReplaceThingsIn namesOnTheSameLevel scopes { range, name, sign
             && not (Set.member name reservedElmKeywords)
             && shouldNameBeReported origin
     then
-        if Dict.member nameWithoutUnderscore namesOnTheSameLevel then
+        if Set.member nameWithoutUnderscore namesOnTheSameLevel then
             Just
                 (Rule.error
                     { message = name ++ " should not end with an underscore"
@@ -844,8 +824,8 @@ shouldNameBeReported origin =
 
 isDefinedInScope : Scopes -> String -> Bool
 isDefinedInScope ( top, rest ) name =
-    Dict.member name top
-        || List.any (Dict.member name) rest
+    Set.member name top
+        || List.any (Set.member name) rest
 
 
 rangeToRangeLike : Range -> RangeLike
@@ -896,7 +876,7 @@ importedFromBasics =
     , "always"
     , "never"
     ]
-        |> List.foldl (\name dict -> Dict.insert name [] dict) Dict.empty
+        |> Set.fromList
 
 
 mapAppend : (a -> b) -> List a -> List b -> List b
