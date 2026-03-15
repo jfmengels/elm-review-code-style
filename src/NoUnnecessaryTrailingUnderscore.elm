@@ -152,7 +152,7 @@ rule =
         |> Rule.withModuleContextUsingContextCreator
             { fromProjectToModule = fromProjectToModule
             , fromModuleToProject = fromModuleToProject
-            , foldProjectContexts = foldProjectContexts
+            , foldProjectContexts = Dict.union
             }
         |> Rule.withContextFromImportedModules
         |> Rule.providesFixesForProjectRule
@@ -258,11 +258,6 @@ collectExposed ast =
                             Nothing
                 )
                 ast.declarations
-
-
-foldProjectContexts : ProjectContext -> ProjectContext -> ProjectContext
-foldProjectContexts new previous =
-    Dict.union new previous
 
 
 importVisitor : Node Import -> ModuleContext -> ( List nothing, ModuleContext )
