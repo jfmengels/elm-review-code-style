@@ -167,7 +167,9 @@ dependenciesVisitor dependencies projectContext =
         |> List.concatMap Dependency.modules
         |> List.foldl
             (\{ name, values } acc ->
-                Dict.insert (String.split "." name) (List.map .name values) acc
+                Dict.insert (String.split "." name)
+                    (List.foldl (\value set -> Set.insert value.name set) Set.empty values)
+                    acc
             )
             projectContext
     )
@@ -184,7 +186,7 @@ moduleVisitor schema =
 
 
 type alias ProjectContext =
-    Dict ModuleName (List String)
+    Dict ModuleName (Set String)
 
 
 initialProjectContext : ProjectContext
@@ -195,7 +197,7 @@ initialProjectContext =
 type alias ModuleContext =
     { scopes : Scopes
     , scopesToAdd : Dict RangeLike Scope
-    , exposedFunctionsFromModule : Dict ModuleName (List String)
+    , exposedFunctionsFromModule : Dict ModuleName (Set String)
     }
 
 
@@ -232,31 +234,33 @@ fromModuleToProject =
         |> Rule.withFullAst
 
 
-collectExposed : File -> List String
+collectExposed : File -> Set String
 collectExposed ast =
     case Node.value ast.moduleDefinition |> Module.exposingList of
         Exposing.Explicit list ->
-            List.filterMap
-                (\node ->
-                    case Node.value node of
+            List.foldl
+                (\(Node _ node) set ->
+                    case node of
                         Exposing.FunctionExpose name ->
-                            Just name
+                            Set.insert name set
 
                         _ ->
-                            Nothing
+                            set
                 )
+                Set.empty
                 list
 
         Exposing.All _ ->
-            List.filterMap
-                (\decl ->
-                    case Node.value decl of
+            List.foldl
+                (\(Node _ node) set ->
+                    case node of
                         Declaration.FunctionDeclaration { declaration } ->
-                            Just (Node.value (Node.value declaration).name)
+                            Set.insert (Node.value (Node.value declaration).name) set
 
                         _ ->
-                            Nothing
+                            set
                 )
+                Set.empty
                 ast.declarations
 
 
@@ -290,7 +294,7 @@ importVisitor (Node _ import_) context =
             case Dict.get (Node.value import_.moduleName) context.exposedFunctionsFromModule of
                 Just names ->
                     ( []
-                    , { context | scopes = Tuple.mapFirst (\scope -> List.foldl Set.insert scope names) context.scopes }
+                    , { context | scopes = Tuple.mapFirst (\scope -> Set.union names scope) context.scopes }
                     )
 
                 Nothing ->
