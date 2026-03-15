@@ -476,8 +476,8 @@ expressionVisitorHelp node context =
                 ( errors, newContext ) =
                     report
                         (List.concatMap
-                            (\declaration ->
-                                case Node.value declaration of
+                            (\(Node _ declaration) ->
+                                case declaration of
                                     Expression.LetFunction function ->
                                         let
                                             functionImplementation : Expression.FunctionImplementation
