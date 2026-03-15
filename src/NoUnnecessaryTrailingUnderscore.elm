@@ -805,8 +805,8 @@ findUsages targetName intendedName remainingNodes acc =
 
 
 extractExpression : Node Expression.LetDeclaration -> Node Expression
-extractExpression letExpr =
-    case Node.value letExpr of
+extractExpression (Node _ letExpr) =
+    case letExpr of
         Expression.LetFunction { declaration } ->
             (Node.value declaration).expression
 
