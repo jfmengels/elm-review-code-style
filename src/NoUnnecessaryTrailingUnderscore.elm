@@ -523,8 +523,8 @@ expressionVisitorHelp node context =
 
 getNamesFromLetDeclarations : List (Node Expression.LetDeclaration) -> Scope
 getNamesFromLetDeclarations declarations =
-    List.concatMap
-        (\(Node _ declaration) ->
+    List.foldl
+        (\(Node _ declaration) dict ->
             case declaration of
                 Expression.LetFunction function ->
                     let
@@ -533,20 +533,21 @@ getNamesFromLetDeclarations declarations =
                                 |> Node.value
                                 |> .name
                     in
-                    [ ( name
-                      , List.filterMap
+                    Dict.insert
+                        name
+                        (List.filterMap
                             identity
                             [ Just range
                             , Maybe.map (Node.value >> .name >> Node.range) function.signature
                             ]
-                      )
-                    ]
+                        )
+                        dict
 
                 Expression.LetDestructuring pattern _ ->
-                    List.map (\{ name } -> ( name, [] )) (getDeclaredVariableNames pattern)
+                    List.foldl (\{ name } acc -> Dict.insert name [] acc) dict (getDeclaredVariableNames pattern)
         )
+        Dict.empty
         declarations
-        |> Dict.fromList
 
 
 reportErrorsForLet : Node Expression -> Scope -> Scopes -> List (Node Expression.LetDeclaration) -> List (Rule.Error {}) -> List (Rule.Error {})
