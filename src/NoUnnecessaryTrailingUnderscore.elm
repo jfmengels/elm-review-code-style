@@ -483,7 +483,6 @@ expressionVisitorHelp node context =
                 namesFromLetDeclarations : Scope
                 namesFromLetDeclarations =
                     getNamesFromLetDeclarations declarations
-                        |> Dict.fromList
 
                 ( errors, newContext ) =
                     report
@@ -522,7 +521,7 @@ expressionVisitorHelp node context =
             ( [], context )
 
 
-getNamesFromLetDeclarations : List (Node Expression.LetDeclaration) -> List ( String, List Range )
+getNamesFromLetDeclarations : List (Node Expression.LetDeclaration) -> Scope
 getNamesFromLetDeclarations declarations =
     List.concatMap
         (\declaration ->
@@ -549,6 +548,7 @@ getNamesFromLetDeclarations declarations =
                         |> List.map (\name -> ( name, [] ))
         )
         declarations
+        |> Dict.fromList
 
 
 reportErrorsForLet : Node Expression -> Scope -> Scopes -> List (Node Expression.LetDeclaration) -> List (Rule.Error {}) -> List (Rule.Error {})
