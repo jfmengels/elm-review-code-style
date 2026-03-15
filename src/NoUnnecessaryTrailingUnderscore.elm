@@ -543,8 +543,7 @@ reportErrorsForLet letExpression namesFromLetDeclarations scopes declarations in
             case node of
                 Expression.LetFunction function ->
                     let
-                        functionName : Node String
-                        functionName =
+                        (Node range name) =
                             function.declaration
                                 |> Node.value
                                 |> .name
@@ -554,8 +553,8 @@ reportErrorsForLet letExpression namesFromLetDeclarations scopes declarations in
                             letExpression
                             namesFromLetDeclarations
                             scopes
-                            { name = Node.value functionName
-                            , range = Node.range functionName
+                            { name = name
+                            , range = range
                             , signatureRange = Maybe.map (\(Node _ signature) -> Node.range signature.name) function.signature
                             , origin = NotFromRecord
                             }
