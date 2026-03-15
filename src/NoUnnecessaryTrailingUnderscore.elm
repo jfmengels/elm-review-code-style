@@ -196,7 +196,8 @@ initialProjectContext =
 
 type alias ModuleContext =
     { scopes : Scopes
-    , scopesToAdd : Dict RangeLike Scope
+    , scopesToAdd : List ( Range, Scope )
+    , caseToExit : List Range
     , exposedFunctionsFromModule : Dict ModuleName (Set String)
     }
 
@@ -209,16 +210,13 @@ type alias Scope =
     Set String
 
 
-type alias RangeLike =
-    List Int
-
-
 fromProjectToModule : Rule.ContextCreator ProjectContext ModuleContext
 fromProjectToModule =
     Rule.initContextCreator
         (\projectContext ->
             { scopes = ( importedFromBasics, [] )
-            , scopesToAdd = Dict.empty
+            , scopesToAdd = []
+            , caseToExit = []
             , exposedFunctionsFromModule = projectContext
             }
         )
@@ -426,32 +424,45 @@ reservedElmKeywords =
 
 
 expressionVisitor : Node Expression -> ModuleContext -> ( List (Rule.Error {}), ModuleContext )
-expressionVisitor node context =
+expressionVisitor ((Node nodeRange _) as node) context =
     let
         newContext : ModuleContext
         newContext =
-            case Dict.get (Node.range node |> rangeToRangeLike) context.scopesToAdd of
-                Just scopeToAdd ->
-                    { context | scopes = addNewScope scopeToAdd context.scopes }
-
-                Nothing ->
+            case context.scopesToAdd of
+                [] ->
                     context
+
+                ( scopeRange, scopeToAdd ) :: rest ->
+                    if nodeRange == scopeRange then
+                        { context
+                            | scopes = addNewScope scopeToAdd context.scopes
+                            , caseToExit = scopeRange :: context.caseToExit
+                            , scopesToAdd = rest
+                        }
+
+                    else
+                        context
     in
     expressionVisitorHelp node newContext
 
 
 expressionExitVisitor : Node Expression -> ModuleContext -> ( List nothing, ModuleContext )
-expressionExitVisitor node context =
-    let
-        newContext : ModuleContext
-        newContext =
-            if Dict.member (Node.range node |> rangeToRangeLike) context.scopesToAdd then
-                { context | scopes = popScope context.scopes }
+expressionExitVisitor (Node nodeRange _) context =
+    ( []
+    , case context.caseToExit of
+        [] ->
+            context
+
+        scopeRange :: rest ->
+            if nodeRange == scopeRange then
+                { context
+                    | scopes = popScope context.scopes
+                    , caseToExit = rest
+                }
 
             else
                 context
-    in
-    ( [], newContext )
+    )
 
 
 expressionVisitorHelp : Node Expression -> ModuleContext -> ( List (Rule.Error {}), ModuleContext )
@@ -493,13 +504,7 @@ expressionVisitorHelp node context =
                         { context | scopes = addNewScope namesFromLetDeclarations context.scopes }
             in
             ( reportErrorsForLet node namesFromLetDeclarations context.scopes let_.declarations errors
-            , { newContext
-                | scopesToAdd =
-                    Dict.insert
-                        (rangeToRangeLike (Node.range let_.expression))
-                        namesFromLetDeclarations
-                        newContext.scopesToAdd
-              }
+            , { newContext | scopesToAdd = ( Node.range let_.expression, namesFromLetDeclarations ) :: newContext.scopesToAdd }
             )
 
         _ ->
@@ -629,7 +634,7 @@ report patternsAndBody context =
                                 |> Set.fromList
                     in
                     { errors = filterMapWithInitial (error expression Set.empty (addNewScope names context.scopes)) declaredVariables acc.errors
-                    , scopesToAdd = Dict.insert (rangeToRangeLike (Node.range expression)) names acc.scopesToAdd
+                    , scopesToAdd = ( Node.range expression, names ) :: acc.scopesToAdd
                     }
                 )
                 { errors = []
@@ -817,15 +822,6 @@ isDefinedInScope : Scopes -> String -> Bool
 isDefinedInScope ( top, rest ) name =
     Set.member name top
         || List.any (Set.member name) rest
-
-
-rangeToRangeLike : Range -> RangeLike
-rangeToRangeLike range =
-    [ range.start.row
-    , range.start.column
-    , range.end.row
-    , range.end.column
-    ]
 
 
 importedFromBasics : Scope
