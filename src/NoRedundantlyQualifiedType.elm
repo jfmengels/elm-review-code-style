@@ -156,8 +156,8 @@ collectExposedFromModule moduleName ast moduleContext =
 
                 Explicit nodes ->
                     List.foldl
-                        (\topLevelExposeNode acc ->
-                            case Node.value topLevelExposeNode of
+                        (\(Node _ topLevelExposeNode) acc ->
+                            case topLevelExposeNode of
                                 Exposing.FunctionExpose _ ->
                                     acc
 
@@ -227,10 +227,10 @@ dependenciesVisitor dependencies projectContext =
 
 
 collectTypesDefinedInModule : List (Node Declaration) -> Set String
-collectTypesDefinedInModule =
+collectTypesDefinedInModule list =
     List.filterMap
-        (\node ->
-            case Node.value node of
+        (\(Node _ decl) ->
+            case decl of
                 FunctionDeclaration _ ->
                     Nothing
 
@@ -249,12 +249,13 @@ collectTypesDefinedInModule =
                 Destructuring _ _ ->
                     Nothing
         )
-        >> Set.fromList
+        list
+        |> Set.fromList
 
 
 declarationVisitor : Node Declaration -> ModuleContext -> List (Rule.Error {})
-declarationVisitor node context =
-    case Node.value node of
+declarationVisitor (Node _ decl) context =
+    case decl of
         FunctionDeclaration function ->
             doFunction context function
 
@@ -262,12 +263,9 @@ declarationVisitor node context =
             doTypeAnnotation context typeAlias.typeAnnotation
 
         CustomTypeDeclaration type_ ->
-            type_.constructors
-                |> List.concatMap
-                    (Node.value
-                        >> .arguments
-                        >> List.concatMap (doTypeAnnotation context)
-                    )
+            List.concatMap
+                (\(Node _ { arguments }) -> List.concatMap (doTypeAnnotation context) arguments)
+                type_.constructors
 
         PortDeclaration signature ->
             doTypeAnnotation context signature.typeAnnotation
@@ -280,8 +278,8 @@ declarationVisitor node context =
 
 
 letDeclarationEnterVisitor : Node Expression.LetDeclaration -> ModuleContext -> List (Rule.Error {})
-letDeclarationEnterVisitor letDeclaration context =
-    case Node.value letDeclaration of
+letDeclarationEnterVisitor (Node _ letDeclaration) context =
+    case letDeclaration of
         LetFunction function ->
             doFunction context function
 
@@ -300,8 +298,8 @@ doFunction context function =
 
 
 doTypeAnnotation : ModuleContext -> Node TypeAnnotation -> List (Rule.Error {})
-doTypeAnnotation context typeAnnotation =
-    case Node.value typeAnnotation of
+doTypeAnnotation context (Node _ typeAnnotation) =
+    case typeAnnotation of
         GenericType _ ->
             []
 
@@ -326,22 +324,22 @@ doTypeAnnotation context typeAnnotation =
 
 doRecordDefinition : List (Node RecordField) -> ModuleContext -> List (Rule.Error {})
 doRecordDefinition recordDefinition context =
-    recordDefinition
-        |> List.concatMap
-            (\(Node _ ( _, typeAnnotation )) ->
-                doTypeAnnotation context typeAnnotation
-            )
+    List.concatMap
+        (\(Node _ ( _, typeAnnotation )) ->
+            doTypeAnnotation context typeAnnotation
+        )
+        recordDefinition
 
 
 doConstructor : ModuleContext -> Node ( ModuleName, String ) -> List (Rule.Error {})
-doConstructor context constructor =
+doConstructor context (Node range constructor) =
     case constructor of
-        Node range ( [ qualifier ], name ) ->
+        ( [ qualifier ], name ) ->
             if qualifier /= name || Set.member name context.typesDefinedInModule then
                 []
 
             else
-                case ModuleNameLookupTable.moduleNameFor context.lookupTable constructor of
+                case ModuleNameLookupTable.moduleNameAt context.lookupTable range of
                     Just moduleName ->
                         reportErrorBasedOnImportedTypes context moduleName range name
 
@@ -395,9 +393,8 @@ collectImportedTypes exposedTypes (Node _ importNode) set =
     case importNode.exposingList of
         Just (Node _ exposing_) ->
             let
-                moduleName : ModuleName
-                moduleName =
-                    Node.value importNode.moduleName
+                (Node _ moduleName) =
+                    importNode.moduleName
             in
             case exposing_ of
                 Exposing.All _ ->
@@ -410,8 +407,8 @@ collectImportedTypes exposedTypes (Node _ importNode) set =
 
                 Exposing.Explicit nodes ->
                     List.foldl
-                        (\topLevelExposeNode acc ->
-                            case Node.value topLevelExposeNode of
+                        (\(Node _ topLevelExposeNode) acc ->
+                            case topLevelExposeNode of
                                 Exposing.FunctionExpose _ ->
                                     set
 
@@ -457,19 +454,19 @@ importFix moduleName name imports =
     let
         matchingImport : Maybe (Node Import)
         matchingImport =
-            find (\import_ -> Node.value (Node.value import_).moduleName == moduleName) imports
+            find (\(Node _ import_) -> Node.value import_.moduleName == moduleName) imports
     in
     case matchingImport of
-        Just importNode ->
-            case (Node.value importNode).exposingList of
+        Just (Node importRange importNode) ->
+            case importNode.exposingList of
                 Just (Node _ (Exposing.All _)) ->
                     []
 
-                Just (Node _ (Exposing.Explicit (first :: _))) ->
-                    [ Fix.insertAt (Node.range first).start (name ++ ", ") ]
+                Just (Node _ (Exposing.Explicit ((Node firstRange _) :: _))) ->
+                    [ Fix.insertAt firstRange.start (name ++ ", ") ]
 
                 _ ->
-                    [ Fix.insertAt (Node.range importNode).end (" exposing (" ++ name ++ ")") ]
+                    [ Fix.insertAt importRange.end (" exposing (" ++ name ++ ")") ]
 
         Nothing ->
             -- If no matching imports, assume it is part of the default imports.
