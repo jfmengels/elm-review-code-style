@@ -264,8 +264,8 @@ collectExposed ast =
 
 importVisitor : Node Import -> ModuleContext -> ( List nothing, ModuleContext )
 importVisitor (Node _ import_) context =
-    case Maybe.map Node.value import_.exposingList of
-        Just (Exposing.Explicit list) ->
+    case import_.exposingList of
+        Just (Node _ (Exposing.Explicit list)) ->
             let
                 ( scope, rest ) =
                     context.scopes
@@ -288,7 +288,7 @@ importVisitor (Node _ import_) context =
             , { context | scopes = ( newScope, rest ) }
             )
 
-        Just (Exposing.All _) ->
+        Just (Node _ (Exposing.All _)) ->
             case Dict.get (Node.value import_.moduleName) context.exposedFunctionsFromModule of
                 Just names ->
                     ( []
@@ -376,16 +376,16 @@ type NameOrigin
 
 
 getDeclaredVariableNames : Node Pattern -> List ScopeNames
-getDeclaredVariableNames pattern =
-    case Node.value pattern of
+getDeclaredVariableNames (Node patternRange pattern) =
+    case pattern of
         Pattern.VarPattern name ->
-            [ { name = name, range = Node.range pattern, signatureRange = Nothing, origin = NotFromRecord } ]
+            [ { name = name, range = patternRange, signatureRange = Nothing, origin = NotFromRecord } ]
 
         Pattern.ParenthesizedPattern subPattern ->
             getDeclaredVariableNames subPattern
 
-        Pattern.AsPattern subPattern name ->
-            { name = Node.value name, range = Node.range name, signatureRange = Nothing, origin = NotFromRecord } :: getDeclaredVariableNames subPattern
+        Pattern.AsPattern subPattern (Node nameRange name) ->
+            { name = name, range = nameRange, signatureRange = Nothing, origin = NotFromRecord } :: getDeclaredVariableNames subPattern
 
         Pattern.TuplePattern patterns ->
             List.concatMap getDeclaredVariableNames patterns
@@ -400,7 +400,7 @@ getDeclaredVariableNames pattern =
             List.concatMap getDeclaredVariableNames patterns
 
         Pattern.RecordPattern fields ->
-            List.map (\field -> { name = Node.value field, range = Node.range field, signatureRange = Nothing, origin = FromRecord }) fields
+            List.map (\(Node fieldRange field) -> { name = field, range = fieldRange, signatureRange = Nothing, origin = FromRecord }) fields
 
         _ ->
             []
@@ -578,15 +578,8 @@ reportErrorsForLet letExpression namesFromLetDeclarations scopes declarations in
 reportTopLevelFunction : Scopes -> Expression.Function -> Maybe (Rule.Error {})
 reportTopLevelFunction scopes function =
     let
-        functionNameNode : Node String
-        functionNameNode =
-            function.declaration
-                |> Node.value
-                |> .name
-
-        functionName : String
-        functionName =
-            Node.value functionNameNode
+        (Node nameRange functionName) =
+            (Node.value function.declaration).name
 
         functionNameWithoutUnderscore : String
         functionNameWithoutUnderscore =
@@ -604,7 +597,7 @@ reportTopLevelFunction scopes function =
                     [ "A trailing underscore \"_\" is often used to prevent shadowing issues, but top-level declarations should not resolve these issues in that manner."
                     ]
                 }
-                (Node.range functionNameNode)
+                nameRange
             )
 
     else
@@ -616,7 +609,7 @@ report patternsAndBody context =
     let
         { errors, scopesToAdd } =
             List.foldr
-                (\( patterns, expression ) acc ->
+                (\( patterns, (Node range _) as expression ) acc ->
                     let
                         declaredVariables : List ScopeNames
                         declaredVariables =
@@ -627,7 +620,7 @@ report patternsAndBody context =
                             List.foldl (\var set -> Set.insert var.name set) Set.empty declaredVariables
                     in
                     { errors = List.foldl (error expression Set.empty (addNewScope names context.scopes)) acc.errors declaredVariables
-                    , scopesToAdd = ( Node.range expression, names ) :: acc.scopesToAdd
+                    , scopesToAdd = ( range, names ) :: acc.scopesToAdd
                     }
                 )
                 { errors = []
@@ -712,24 +705,24 @@ findUsages targetName intendedName remainingNodes acc =
         [] ->
             Just acc
 
-        node :: rest ->
-            case Node.value node of
+        (Node range node) :: rest ->
+            case node of
                 Expression.FunctionOrValue [] name ->
                     if name == intendedName then
                         Nothing
 
                     else if name == targetName then
-                        findUsages targetName intendedName rest (Node.range node :: acc)
+                        findUsages targetName intendedName rest (range :: acc)
 
                     else
                         findUsages targetName intendedName rest acc
 
                 Expression.RecordUpdateExpression (Node nameRange name) nodes ->
                     if name == targetName then
-                        findUsages targetName intendedName (mapAppend (Node.value >> Tuple.second) nodes rest) (nameRange :: acc)
+                        findUsages targetName intendedName (mapAppend (\(Node _ ( _, n )) -> n) nodes rest) (nameRange :: acc)
 
                     else
-                        findUsages targetName intendedName (mapAppend (Node.value >> Tuple.second) nodes rest) acc
+                        findUsages targetName intendedName (mapAppend (\(Node _ ( _, n )) -> n) nodes rest) acc
 
                 Expression.Application nodes ->
                     findUsages targetName intendedName (nodes ++ rest) acc
@@ -759,7 +752,7 @@ findUsages targetName intendedName remainingNodes acc =
                     findUsages targetName intendedName (lambda.expression :: rest) acc
 
                 Expression.RecordExpr nodes ->
-                    findUsages targetName intendedName (mapAppend (Node.value >> Tuple.second) nodes rest) acc
+                    findUsages targetName intendedName (mapAppend (\(Node _ ( _, n )) -> n) nodes rest) acc
 
                 Expression.ListExpr nodes ->
                     findUsages targetName intendedName (nodes ++ rest) acc
