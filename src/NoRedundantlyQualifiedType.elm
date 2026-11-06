@@ -228,29 +228,20 @@ dependenciesVisitor dependencies projectContext =
 
 collectTypesDefinedInModule : List (Node Declaration) -> Set String
 collectTypesDefinedInModule list =
-    List.filterMap
-        (\(Node _ decl) ->
+    List.foldl
+        (\(Node _ decl) set ->
             case decl of
-                FunctionDeclaration _ ->
-                    Nothing
-
                 AliasDeclaration typeAlias ->
-                    Just (Node.value typeAlias.name)
+                    Set.insert (Node.value typeAlias.name) set
 
                 CustomTypeDeclaration type_ ->
-                    Just (Node.value type_.name)
+                    Set.insert (Node.value type_.name) set
 
-                PortDeclaration _ ->
-                    Nothing
-
-                InfixDeclaration _ ->
-                    Nothing
-
-                Destructuring _ _ ->
-                    Nothing
+                _ ->
+                    set
         )
+        Set.empty
         list
-        |> Set.fromList
 
 
 declarationVisitor : Node Declaration -> ModuleContext -> List (Rule.Error {})
