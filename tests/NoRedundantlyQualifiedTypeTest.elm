@@ -212,6 +212,23 @@ type Set a =
 """ ]
                     |> Review.Test.runOnModules rule
                     |> Review.Test.expectNoErrors
+        , test "should not report an error exposing a record type (and thus its constructor) results in a clash with another value with the same name" <|
+            \() ->
+                [ """module A exposing (..)
+import Book
+import Params exposing (Params(..))
+getTitle : Params -> Book.Book -> String
+getTitle params book =
+    case params of
+        Book -> book.title
+        OldBook -> "Old"
+""", """module Book exposing (Book)
+type alias Book = { title : String }
+""", """module Params exposing (Params(..))
+type Params = Book | OldBook
+""" ]
+                    |> Review.Test.runOnModules rule
+                    |> Review.Test.expectNoErrors
         , test "should report an error if an import exposes everything but doesn't expose the type we want to shorten (exposing everything)" <|
             \() ->
                 [ """module A exposing (..)
