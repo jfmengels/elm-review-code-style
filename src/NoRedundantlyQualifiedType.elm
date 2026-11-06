@@ -430,23 +430,19 @@ collectImportedTypes exposedTypes (Node _ importNode) set =
 
 collectType : ModuleName -> String -> Dict String ImportedType -> Dict String ImportedType
 collectType moduleName name dict =
-    Dict.update name
-        (\maybe ->
-            case maybe of
-                Nothing ->
-                    Just (FromSingleModule moduleName)
+    case Dict.get name dict of
+        Nothing ->
+            Dict.insert name (FromSingleModule moduleName) dict
 
-                Just (FromSingleModule previousModuleName) ->
-                    if previousModuleName == moduleName then
-                        maybe
+        Just (FromSingleModule previousModuleName) ->
+            if previousModuleName == moduleName then
+                dict
 
-                    else
-                        Just FromMultipleModules
+            else
+                Dict.insert name FromMultipleModules dict
 
-                Just FromMultipleModules ->
-                    maybe
-        )
-        dict
+        Just FromMultipleModules ->
+            dict
 
 
 importFix : ModuleName -> String -> List (Node Import) -> List Fix
